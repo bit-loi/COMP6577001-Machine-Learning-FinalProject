@@ -1,0 +1,48 @@
+# Bookstore .gitignore
+
+# IDE and Editor Files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# System Files
+Thumbs.db
+desktop.ini
+
+# Configuration Files (sensitive)
+config/config.php
+.env
+
+# Logs
+*.log
+logs/
+
+# Temporary Files
+tmp/
+temp/
+cache/
+
+# Uploaded Images (if large)
+# images/uploads/
+
+# Vendor (if using Composer)
+vendor/
+
+# Node Modules (if using npm)
+node_modules/
+
+# Database Backups
+*.sql
+database/backups/
+
+# OS Generated Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

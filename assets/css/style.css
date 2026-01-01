@@ -1,0 +1,554 @@
+/* ========================================
+   BOOKSTORE - DARK OCEAN THEME
+   Deep Sea Dark Mode - No Purple!
+   ======================================== */
+
+/* ========== CSS VARIABLES ========== */
+:root {
+    /* Dark Ocean Palette - NO PURPLE! */
+    --bg-darkest: #0A0E27;
+    --bg-dark: #0F172A;
+    --bg-medium: #1E293B;
+    --bg-light: #334155;
+    
+    /* Ocean Blue/Teal - Main Colors */
+    --ocean-deep: #0D1B2A;
+    --ocean-blue: #1B263B;
+    --ocean-teal: #00D9FF;
+    --ocean-cyan: #00F5FF;
+    --ocean-aqua: #00E5CC;
+    
+    /* Accent Colors */
+    --accent-teal: #14B8A6;
+    --accent-cyan: #06B6D4;
+    --accent-blue: #0EA5E9;
+    --accent-sky: #38BDF8;
+    
+    /* Gradients - Pure Ocean, NO Purple */
+    --gradient-dark: linear-gradient(135deg, #0A0E27 0%, #0F172A 50%, #1E293B 100%);
+    --gradient-ocean: linear-gradient(135deg, #0D1B2A 0%, #1B263B 100%);
+    --gradient-teal: linear-gradient(135deg, #14B8A6 0%, #06B6D4 100%);
+    --gradient-cyan: linear-gradient(135deg, #06B6D4 0%, #00D9FF 100%);
+    --gradient-aqua: linear-gradient(135deg, #00E5CC 0%, #00F5FF 100%);
+    
+    /* Text Colors */
+    --text-primary: #F1F5F9;
+    --text-secondary: #CBD5E1;
+    --text-muted: #94A3B8;
+    --text-dark: #0F172A;
+    
+    /* Shadows */
+    --shadow-sm: 0 2px 8px rgba(0, 217, 255, 0.1);
+    --shadow-md: 0 4px 16px rgba(0, 217, 255, 0.15);
+    --shadow-lg: 0 8px 32px rgba(0, 217, 255, 0.2);
+    --shadow-glow: 0 0 30px rgba(0, 217, 255, 0.3);
+    
+    /* Transitions */
+    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ========== GLOBAL STYLES ========== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    color: var(--text-primary);
+    line-height: 1.6;
+    background: var(--gradient-dark);
+    background-attachment: fixed;
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+}
+
+/* Animated Ocean Pattern Background */
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: 
+        radial-gradient(circle at 20% 30%, rgba(0, 217, 255, 0.05) 0%, transparent 50%),
+        radial-gradient(circle at 80% 70%, rgba(0, 229, 204, 0.05) 0%, transparent 50%),
+        radial-gradient(circle at 50% 50%, rgba(6, 182, 212, 0.03) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+    animation: float 20s ease-in-out infinite;
+}
+
+body::after {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('data:image/svg+xml,<svg width="60" height="60" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse"><path d="M 60 0 L 0 0 0 60" fill="none" stroke="rgba(0,217,255,0.02)" stroke-width="1"/></pattern></defs><rect width="60" height="60" fill="url(%23grid)"/></svg>');
+    pointer-events: none;
+    z-index: 0;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+a {
+    text-decoration: none;
+    transition: var(--transition);
+}
+
+/* ========== NAVIGATION ========== */
+.navbar {
+    background: rgba(15, 23, 42, 0.95) !important;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    padding: 1rem 0;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), 0 0 40px rgba(0, 217, 255, 0.1);
+    border-bottom: 1px solid rgba(0, 217, 255, 0.2);
+    position: relative;
+    z-index: 1000;
+}
+
+.navbar-brand {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.75rem !important;
+    font-weight: 700;
+    background: var(--gradient-cyan);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: 0 0 30px rgba(0, 217, 255, 0.5);
+}
+
+.nav-link {
+    color: var(--text-secondary) !important;
+    font-weight: 500;
+    padding: 0.5rem 1rem !important;
+    border-radius: 8px;
+    transition: var(--transition);
+    position: relative;
+}
+
+.nav-link:hover {
+    color: var(--ocean-cyan) !important;
+    background: rgba(0, 217, 255, 0.1);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 217, 255, 0.2);
+}
+
+.nav-link.active {
+    color: var(--ocean-cyan) !important;
+    background: rgba(0, 217, 255, 0.15);
+}
+
+/* ========== HERO SECTION ========== */
+.hero-section {
+    background: var(--gradient-ocean);
+    position: relative;
+    overflow: hidden;
+    z-index: 1;
+}
+
+.hero-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: 
+        radial-gradient(circle at 30% 50%, rgba(0, 217, 255, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 70% 50%, rgba(0, 229, 204, 0.1) 0%, transparent 50%);
+    animation: pulse 8s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+}
+
+.hero-section h1 {
+    color: white;
+    text-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), 0 0 40px rgba(0, 217, 255, 0.3);
+}
+
+.hero-section .lead {
+    color: var(--text-secondary);
+}
+
+/* ========== BUTTONS ========== */
+.btn {
+    border-radius: 12px;
+    padding: 0.75rem 1.5rem;
+    font-weight: 600;
+    transition: var(--transition);
+    border: none;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-primary {
+    background: var(--gradient-cyan);
+    color: var(--text-dark);
+    box-shadow: 0 4px 15px rgba(0, 217, 255, 0.4);
+}
+
+.btn-primary:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0, 217, 255, 0.6);
+    background: var(--gradient-cyan);
+    color: var(--text-dark);
+}
+
+.btn-outline-primary {
+    border: 2px solid var(--ocean-teal);
+    color: var(--ocean-teal);
+    background: transparent;
+}
+
+.btn-outline-primary:hover {
+    background: var(--ocean-teal);
+    color: var(--text-dark);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0, 217, 255, 0.4);
+}
+
+.btn-light {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+}
+
+.btn-light:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(255, 255, 255, 0.2);
+}
+
+.btn-outline-light {
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    color: white;
+    background: transparent;
+}
+
+.btn-outline-light:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: white;
+    color: white;
+    transform: translateY(-3px);
+}
+
+/* ========== CARDS ========== */
+.card {
+    border: none;
+    border-radius: 16px;
+    background: rgba(30, 41, 59, 0.8);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: var(--shadow-md);
+    transition: var(--transition);
+    overflow: hidden;
+    border: 1px solid rgba(0, 217, 255, 0.1);
+    position: relative;
+    z-index: 1;
+}
+
+.card:hover {
+    box-shadow: var(--shadow-glow);
+    transform: translateY(-8px);
+    background: rgba(30, 41, 59, 0.95);
+    border-color: rgba(0, 217, 255, 0.4);
+}
+
+.hover-lift {
+    transition: var(--transition);
+}
+
+.hover-lift:hover {
+    transform: translateY(-8px);
+    box-shadow: var(--shadow-glow);
+}
+
+.card-img-top {
+    border-radius: 16px 16px 0 0;
+    transition: var(--transition);
+}
+
+.card:hover .card-img-top {
+    transform: scale(1.05);
+}
+
+.card-title {
+    color: var(--text-primary);
+    font-weight: 700;
+}
+
+.card-body {
+    padding: 1.5rem;
+    position: relative;
+    z-index: 1;
+}
+
+.card-text, .text-muted {
+    color: var(--text-muted) !important;
+}
+
+/* ========== BADGES ========== */
+.badge {
+    border-radius: 12px;
+    padding: 0.35rem 0.75rem;
+    font-weight: 600;
+}
+
+.badge-primary {
+    background: var(--gradient-cyan);
+    color: var(--text-dark);
+}
+
+.badge-success {
+    background: var(--gradient-teal);
+    color: white;
+}
+
+.badge-danger {
+    background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+    color: white;
+}
+
+.badge-warning {
+    background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+    color: white;
+}
+
+/* ========== GRADIENT TEXT ========== */
+.gradient-text {
+    background: var(--gradient-cyan);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* ========== PRICE STYLING ========== */
+.price {
+    font-size: 1.5rem;
+    font-weight: 700;
+    background: var(--gradient-cyan);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* ========== ANIMATIONS ========== */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-fade-in {
+    animation: fadeIn 0.8s ease-out;
+}
+
+@keyframes float {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-10px);
+    }
+}
+
+.float-animation {
+    animation: float 3s ease-in-out infinite;
+}
+
+/* ========== ICON BOXES ========== */
+.icon-box {
+    background: var(--gradient-cyan);
+    border-radius: 16px;
+    box-shadow: var(--shadow-md);
+    transition: var(--transition);
+}
+
+.icon-box:hover {
+    transform: translateY(-4px) rotate(5deg);
+    box-shadow: var(--shadow-glow);
+}
+
+/* ========== FORMS ========== */
+.form-control, .form-select {
+    border: 2px solid rgba(0, 217, 255, 0.2);
+    border-radius: 12px;
+    padding: 0.75rem 1rem;
+    transition: var(--transition);
+    font-size: 1rem;
+    background: rgba(30, 41, 59, 0.5);
+    color: var(--text-primary);
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: var(--ocean-teal);
+    box-shadow: 0 0 0 4px rgba(0, 217, 255, 0.2);
+    outline: none;
+    background: rgba(30, 41, 59, 0.8);
+    color: var(--text-primary);
+}
+
+.form-label {
+    color: var(--text-secondary);
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+/* ========== ALERTS ========== */
+.alert {
+    border-radius: 12px;
+    border: none;
+    padding: 1rem 1.5rem;
+}
+
+.alert-success {
+    background: rgba(20, 184, 166, 0.2);
+    color: #5EEAD4;
+    border: 1px solid rgba(20, 184, 166, 0.3);
+}
+
+.alert-danger {
+    background: rgba(239, 68, 68, 0.2);
+    color: #FCA5A5;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+/* ========== TABLE ========== */
+.table {
+    border-radius: 12px;
+    overflow: hidden;
+    background: rgba(30, 41, 59, 0.5);
+    color: var(--text-primary);
+}
+
+.table thead {
+    background: var(--gradient-ocean);
+    color: white;
+}
+
+.table tbody tr {
+    transition: var(--transition);
+    border-bottom: 1px solid rgba(0, 217, 255, 0.1);
+}
+
+.table tbody tr:hover {
+    background: rgba(0, 217, 255, 0.1);
+    transform: scale(1.01);
+}
+
+/* ========== BREADCRUMB ========== */
+.breadcrumb {
+    background: transparent;
+    padding: 1rem 0;
+}
+
+.breadcrumb-item a {
+    color: var(--ocean-teal);
+    font-weight: 500;
+}
+
+.breadcrumb-item.active {
+    color: var(--text-muted);
+}
+
+/* ========== UTILITIES ========== */
+.text-ocean {
+    color: var(--ocean-teal) !important;
+}
+
+.bg-ocean {
+    background: var(--gradient-ocean) !important;
+}
+
+.bg-dark {
+    background: var(--bg-dark) !important;
+}
+
+/* ========== SCROLLBAR ========== */
+::-webkit-scrollbar {
+    width: 12px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-dark);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--gradient-cyan);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--ocean-teal);
+}
+
+/* ========== SELECTION ========== */
+::selection {
+    background: var(--ocean-cyan);
+    color: var(--text-dark);
+}
+
+::-moz-selection {
+    background: var(--ocean-cyan);
+    color: var(--text-dark);
+}
+
+/* ========== SMOOTH SCROLL ========== */
+html {
+    scroll-behavior: smooth;
+}
+
+/* ========== RESPONSIVE ========== */
+@media (max-width: 768px) {
+    .navbar-brand {
+        font-size: 1.5rem !important;
+    }
+    
+    .hero-section h1 {
+        font-size: 2rem !important;
+    }
+    
+    .card {
+        margin-bottom: 1.5rem;
+    }
+}
+
+/* ========== CONTAINER ========== */
+.container {
+    position: relative;
+    z-index: 1;
+}
+
+/* ========== SHADOWS ========== */
+.shadow-sm {
+    box-shadow: var(--shadow-sm) !important;
+}
+
+.shadow-custom {
+    box-shadow: var(--shadow-md) !important;
+}
+
+.shadow-lg {
+    box-shadow: var(--shadow-lg) !important;
+}
