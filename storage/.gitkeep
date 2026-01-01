@@ -1,0 +1,7 @@
+# Storage Directory
+
+This directory is used to store rate limiting data.
+
+The `rate_limit.json` file will be automatically created when the rate limiter is first used.
+
+**Note:** This file is ignored by Git for security and performance reasons.
