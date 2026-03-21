@@ -1,14 +1,27 @@
 <?php
 session_start();
 require_once '../config/config.php';
+require_once '../middleware/RateLimiter.php';
+
+// Rate limiting: max 5 contact submissions per 10 minutes
+RateLimiter::contact();
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     
+    // CSRF Token Validation
+    if (empty($_POST['csrf_token']) || empty($_SESSION['csrf_token']) ||
+        !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+        $_SESSION['error_message'] = 'Invalid request. Please try again.';
+        header('Location: ../pages/contact.php?error=1');
+        exit();
+    }
+    unset($_SESSION['csrf_token']); // Invalidate after use
+
     // Get and sanitize form data
-    $name = htmlspecialchars(trim($_POST['name']));
-    $email = filter_var(trim($_POST['email']), FILTER_SANITIZE_EMAIL);
-    $subject = htmlspecialchars(trim($_POST['subject']));
-    $message = htmlspecialchars(trim($_POST['message']));
+    $name    = htmlspecialchars(trim($_POST['name'] ?? ''));
+    $email   = filter_var(trim($_POST['email'] ?? ''), FILTER_SANITIZE_EMAIL);
+    $subject = htmlspecialchars(trim($_POST['subject'] ?? ''));
+    $message = htmlspecialchars(trim($_POST['message'] ?? ''));
     
     // Validate
     $errors = [];

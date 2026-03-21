@@ -27,7 +27,7 @@ try {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Categories Management - Bookstore Admin</title>
+    <title>Categories Management - Premeditatio Malorum Admin</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://kit.fontawesome.com/5c5946fe44.js" crossorigin="anonymous"></script>

@@ -1,5 +1,9 @@
-<?php require '../includes/header.php'; ?>
-<?php require '../config/config.php'; ?>
+<?php
+session_start();
+require '../config/config.php';
+require '../middleware/auth.php';
+?>
+<?php include '../includes/header.php'; ?>
 
 <?php
     // TODO: Fetch real cart items from database

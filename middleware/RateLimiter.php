@@ -29,12 +29,12 @@ class RateLimiter {
      * Initialize storage (Redis atau File)
      */
     private function initStorage() {
-        // Coba gunakan Redis jika tersedia
-        if (extension_loaded('redis')) {
+        // Coba gunakan Redis jika extension tersedia dan class Redis ada
+        if (extension_loaded('redis') && class_exists('Redis')) {
             try {
                 return new RedisStorage();
             } catch (Exception $e) {
-                error_log("Redis not available, using file storage: " . $e->getMessage());
+                error_log('[RateLimiter] Redis not available, falling back to file storage: ' . $e->getMessage());
             }
         }
         
@@ -44,14 +44,26 @@ class RateLimiter {
     
     /**
      * Get client IP address
+     * Gunakan REMOTE_ADDR secara default untuk mencegah IP spoofing.
+     * Header X-Forwarded-For HANYA dipercaya jika server ada di belakang trusted proxy.
      */
     private function getClientIP() {
-        if (!empty($_SERVER['HTTP_CLIENT_IP'])) {
-            return $_SERVER['HTTP_CLIENT_IP'];
-        } elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
-            return $_SERVER['HTTP_X_FORWARDED_FOR'];
+        $trustedProxy = getenv('TRUSTED_PROXY') ?: '';
+        $remoteAddr   = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+
+        // Hanya percaya X-Forwarded-For jika request datang dari trusted proxy IP
+        if (!empty($trustedProxy) && $remoteAddr === $trustedProxy) {
+            if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+                // Ambil IP pertama (client asli), bukan yang terakhir (proxy)
+                $ips = array_map('trim', explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']));
+                $clientIp = filter_var($ips[0], FILTER_VALIDATE_IP);
+                if ($clientIp) {
+                    return $clientIp;
+                }
+            }
         }
-        return $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+
+        return $remoteAddr;
     }
     
     /**
@@ -314,7 +326,16 @@ class FileStorage {
     }
     
     private function saveData($data) {
-        file_put_contents($this->storageFile, json_encode($data));
+        $fp = fopen($this->storageFile, 'c');
+        if (!$fp) return;
+        // Exclusive lock untuk mencegah race condition
+        if (flock($fp, LOCK_EX)) {
+            ftruncate($fp, 0);
+            fwrite($fp, json_encode($data));
+            fflush($fp);
+            flock($fp, LOCK_UN);
+        }
+        fclose($fp);
     }
     
     private function cleanExpired($data) {

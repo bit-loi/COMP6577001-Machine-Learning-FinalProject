@@ -19,6 +19,11 @@
     Header set X-Content-Type-Options "nosniff"
     Header set X-Frame-Options "SAMEORIGIN"
     Header set X-XSS-Protection "1; mode=block"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+    Header set Permissions-Policy "geolocation=(), microphone=(), camera=()"
+    Header set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdn.jsdelivr.net https://fonts.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://covers.openlibrary.org https://images.unsplash.com https://via.placeholder.com; connect-src 'self';"
+    Header always unset X-Powered-By
+    Header set Server ""
 </IfModule>
 
 # Disable Directory Browsing
@@ -28,11 +33,20 @@ Options -Indexes
 ErrorDocument 404 /bookstore/404.php
 ErrorDocument 500 /bookstore/500.php
 
-# Protect Configuration Files
-<FilesMatch "^(config\.php)$">
+# Protect Sensitive Files
+<FilesMatch "(\.env|\.env\..*|config\.php|\.git|composer\.lock|package-lock\.json|\.htpasswd|\.htaccess)$">
     Order allow,deny
     Deny from all
 </FilesMatch>
+
+# Protect Storage and Private Directories
+<IfModule mod_rewrite.c>
+    RewriteRule ^storage/ - [F,L]
+    RewriteRule ^database/ - [F,L]
+    RewriteRule ^middleware/ - [F,L]
+    RewriteRule ^config/ - [F,L]
+    RewriteRule ^vendor/ - [F,L]
+</IfModule>
 
 # Enable Compression
 <IfModule mod_deflate.c>

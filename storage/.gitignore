@@ -1,5 +1,0 @@
-# Ignore rate limit data
-rate_limit.json
-
-# But keep the directory
-!.gitkeep

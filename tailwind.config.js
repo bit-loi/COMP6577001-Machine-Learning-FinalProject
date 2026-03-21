@@ -1,0 +1,22 @@
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: [
+    "./index.php",
+    "./pages/**/*.php",
+    "./includes/**/*.php",
+    "./components/**/*.{ts,tsx}",
+    "./demo.tsx",
+  ],
+  theme: {
+    extend: {
+      colors: {
+        border: "hsl(var(--border))",
+        input: "hsl(var(--input))",
+        ring: "hsl(var(--ring))",
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
+      },
+    },
+  },
+  plugins: [require("tailwindcss-animate")],
+}
