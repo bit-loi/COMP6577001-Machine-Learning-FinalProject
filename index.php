@@ -168,13 +168,13 @@
 <!-- ===== HERO SECTION ===== -->
 <section id="hero-section">
 
-    <!-- UnicornStudio BG (desktop only) -->
-    <div id="us-bg" class="hidden lg:block">
+    <!-- UnicornStudio BG (Always display) -->
+    <div id="us-bg">
         <div data-us-project="whwOGlfJ5Rz2rHaEUgHl"></div>
     </div>
 
-    <!-- Mobile stars fallback -->
-    <div class="stars-bg absolute inset-0 lg:hidden"></div>
+    <!-- Pure CSS Stars Fallback (Always display behind WebGL) -->
+    <div class="stars-bg" style="position: absolute; top:0; left:0; width:100%; height:100%; z-index:0;"></div>
 
     <!-- Scanline effect -->
     <div class="scanline"></div>

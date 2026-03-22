@@ -15,7 +15,7 @@ try {
     $stmt->execute();
     $totalProducts = $stmt->fetch(PDO::FETCH_OBJ)->total;
 
-    $stmt = $conn->prepare("SELECT COUNT(*) as total FROM users WHERE is_admin = 0");
+    $stmt = $conn->prepare("SELECT COUNT(*) as total FROM users WHERE role = 'customer'");
     $stmt->execute();
     $totalUsers = $stmt->fetch(PDO::FETCH_OBJ)->total;
 
@@ -31,15 +31,60 @@ try {
     $stmt->execute();
     $recentOrders = $stmt->fetchAll(PDO::FETCH_OBJ);
 
-    // Anomaly detection: orders with unusually high amounts (> 3x average)
-    $stmt = $conn->prepare("SELECT AVG(total_amount) as avg_amount FROM orders");
+    // Machine Learning Anomaly Detection via Flask API
+    // Fetch recent pending or completed orders to evaluate for anomalies
+    $stmt = $conn->prepare("SELECT o.*, u.username, u.email FROM orders o LEFT JOIN users u ON o.user_id = u.id ORDER BY o.created_at DESC LIMIT 50");
     $stmt->execute();
-    $avgAmount = $stmt->fetch(PDO::FETCH_OBJ)->avg_amount ?? 0;
-    $anomalyThreshold = $avgAmount * 3;
+    $potentialOrders = $stmt->fetchAll(PDO::FETCH_OBJ);
+    
+    $anomalyOrders = [];
+    $avgAmount = 0; // We keep this for UI compatibility
+    
+    // Call Flask API for each recent order
+    foreach ($potentialOrders as $order) {
+        $payload = [
+            'TransactionDT' => time() - strtotime($order->created_at), // Secs since transaction
+            'TransactionAmt' => (float)$order->total_amount,
+            // Mocking some internal card/addr features based on user_id to keep it realistic
+            'card1' => 1000 + (($order->user_id * 13) % 9000), 
+            'card2' => 100 + (($order->user_id * 7) % 500),
+            'card3' => 150,
+            'card4' => ($order->user_id % 4) + 1, // 1-4
+            'card5' => 100 + (($order->user_id * 11) % 137),
+            'card6' => ($order->user_id % 2) + 1, // 1-2
+            'ProductCD' => 4,
+            'addr1' => 315,
+            'addr2' => 87,
+            'P_emaildomain' => 16,
+            'R_emaildomain' => 16
+        ];
 
-    $stmt = $conn->prepare("SELECT o.*, u.username, u.email FROM orders o LEFT JOIN users u ON o.user_id = u.id WHERE o.total_amount > :threshold ORDER BY o.total_amount DESC LIMIT 10");
-    $stmt->execute([':threshold' => max($anomalyThreshold, 100)]);
-    $anomalyOrders = $stmt->fetchAll(PDO::FETCH_OBJ);
+        $ch = curl_init('http://127.0.0.1:5000/predict');
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json', 'Connection: close']);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 2); // 2 second timeout per request
+        
+        $response = curl_exec($ch);
+        curl_close($ch);
+
+        if ($response) {
+            $ml_result = json_decode($response, true);
+            if (isset($ml_result['is_anomaly']) && $ml_result['is_anomaly'] === true) {
+                // Attach the ML anomaly score to the object for UI display
+                $order->anomaly_score = $ml_result['anomaly_score'];
+                $anomalyOrders[] = $order;
+            }
+        }
+        
+        // Stop evaluating if we found enough anomalies for the dashboard (performance reasons)
+        if (count($anomalyOrders) >= 10) break;
+    }
+    
+    // Calculate avg amount of found anomalies for UI context, or default to 0
+    $avgAmount = count($anomalyOrders) > 0 ? array_sum(array_column($anomalyOrders, 'total_amount')) / count($anomalyOrders) : 0;
+    $anomalyThreshold = $avgAmount; // Modified for UI compatibility
 
     // Pending orders count
     $stmt = $conn->prepare("SELECT COUNT(*) as total FROM orders WHERE status = 'pending'");
@@ -158,8 +203,8 @@ try {
             Categories
         </a>
 
-        <div class="nav-section">Users</div>
-        <a href="<?php echo APPURL; ?>admin/users/" class="nav-item">
+        <div class="nav-section">Directory</div>
+        <a href="<?php echo APPURL; ?>admin/customers/" class="nav-item">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
             Customers
         </a>
@@ -169,13 +214,7 @@ try {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
             ML Simulation
         </a>
-        <a href="#anomaly-section" class="nav-item" onclick="document.getElementById('anomaly-section').scrollIntoView({behavior:'smooth'}); return false;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-            Anomaly Detection
-            <?php if (count($anomalyOrders) > 0): ?>
-            <span style="margin-left: auto; background: rgba(239,68,68,0.15); color: #ef4444; font-size: 0.65rem; font-weight: 700; padding: 2px 7px; border-radius: 10px;"><?php echo count($anomalyOrders); ?></span>
-            <?php endif; ?>
-        </a>
+
 
         <div style="margin-top: auto; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.06); margin-top: 32px;">
             <a href="<?php echo APPURL; ?>" target="_blank" class="nav-item">
@@ -276,70 +315,19 @@ try {
         <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 24px;">
             <div class="chart-card">
                 <div class="card-title">Sales Overview — <?php echo date('Y'); ?></div>
-                <canvas id="salesChart" height="100"></canvas>
+                <div style="position: relative; height: 280px; width: 100%;">
+                    <canvas id="salesChart"></canvas>
+                </div>
             </div>
             <div class="chart-card">
                 <div class="card-title">Order Status</div>
-                <canvas id="statusChart" height="180"></canvas>
+                <div style="position: relative; height: 280px; width: 100%;">
+                    <canvas id="statusChart"></canvas>
+                </div>
             </div>
         </div>
 
-        <!-- Anomaly Detection Section -->
-        <div id="anomaly-section" style="margin-bottom: 24px;">
-            <div class="anomaly-alert">
-                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
-                    <div class="pulse-dot"></div>
-                    <div>
-                        <div style="font-size: 0.85rem; font-weight: 700; color: #ef4444;">Anomaly Detection</div>
-                        <div style="font-size: 0.75rem; color: rgba(239,68,68,0.6); margin-top: 2px;">
-                            <?php if (count($anomalyOrders) > 0): ?>
-                                <?php echo count($anomalyOrders); ?> suspicious transaction(s) detected — avg order: $<?php echo number_format($avgAmount, 2); ?>, threshold: $<?php echo number_format(max($anomalyThreshold, 100), 2); ?>
-                            <?php else: ?>
-                                No anomalies detected. All transactions appear normal.
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                    <div style="margin-left: auto; font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; color: rgba(239,68,68,0.4);">ML_SERVICE · ACTIVE</div>
-                </div>
 
-                <?php if (count($anomalyOrders) > 0): ?>
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Order ID</th>
-                            <th>Customer</th>
-                            <th>Email</th>
-                            <th>Amount</th>
-                            <th>vs. Average</th>
-                            <th>Status</th>
-                            <th>Date</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($anomalyOrders as $order): ?>
-                        <tr>
-                            <td><span class="mono" style="color: #ef4444;">#<?php echo str_pad($order->id, 5, '0', STR_PAD_LEFT); ?></span></td>
-                            <td style="color: white; font-weight: 500;"><?php echo htmlspecialchars($order->username ?? 'Guest'); ?></td>
-                            <td style="color: rgba(255,255,255,0.4); font-size: 0.75rem;"><?php echo htmlspecialchars($order->email ?? '—'); ?></td>
-                            <td><span style="color: #ef4444; font-weight: 700; font-family: 'JetBrains Mono', monospace;">$<?php echo number_format($order->total_amount, 2); ?></span></td>
-                            <td>
-                                <?php $ratio = $avgAmount > 0 ? round($order->total_amount / $avgAmount, 1) : 0; ?>
-                                <span class="badge badge-anomaly"><?php echo $ratio; ?>× avg</span>
-                            </td>
-                            <td><span class="badge badge-<?php echo $order->status; ?>"><?php echo ucfirst($order->status); ?></span></td>
-                            <td style="color: rgba(255,255,255,0.4); font-size: 0.75rem;"><?php echo date('M d, Y', strtotime($order->created_at)); ?></td>
-                        </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-                <?php else: ?>
-                <div style="text-align: center; padding: 32px; color: rgba(74,222,128,0.5); font-size: 0.8rem;">
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin: 0 auto 12px; display: block;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                    All transactions are within normal parameters
-                </div>
-                <?php endif; ?>
-            </div>
-        </div>
 
         <!-- Recent Orders -->
         <div class="chart-card">

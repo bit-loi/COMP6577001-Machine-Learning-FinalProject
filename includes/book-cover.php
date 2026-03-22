@@ -22,8 +22,8 @@ function getBookCover($isbn, $size = 'M') {
         $size = 'M';
     }
     
-    // Open Library Covers API
-    return "https://covers.openlibrary.org/b/isbn/{$isbn}-{$size}.jpg";
+    // Open Library Covers API with ?default=false to force 404 if missing
+    return "https://covers.openlibrary.org/b/isbn/{$isbn}-{$size}.jpg?default=false";
 }
 
 /**
@@ -89,11 +89,11 @@ function getBookCoverImage($isbn, $title, $size = 'M', $class = '', $attributes 
     $classAttr = $class ? ' class="' . htmlspecialchars($class) . '"' : '';
     $altText = htmlspecialchars($title);
     
-    return '<img src="' . htmlspecialchars($coverUrl) . '" 
+    return '<img src="' . htmlspecialchars($coverUrl, ENT_QUOTES) . '" 
                  alt="' . $altText . '"' . 
                  $classAttr . 
                  $attrs . ' 
-                 onerror="this.src=\'' . htmlspecialchars($fallbackUrl) . '\'"
+                 onerror="this.onerror=null; this.src=\'' . htmlspecialchars($fallbackUrl, ENT_QUOTES) . '\'"
                  loading="lazy">';
 }
 

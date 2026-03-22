@@ -36,7 +36,7 @@ if (isset($_POST['login'])) {
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $errorMessage = 'Invalid email or password.';
         } else {
-            $login = $conn->prepare("SELECT id, username, password, is_admin FROM users WHERE email = :email LIMIT 1"); 
+            $login = $conn->prepare("SELECT id, username, password, role FROM users WHERE email = :email LIMIT 1"); 
             $login->execute(['email' => $email]);
             $fetch = $login->fetch(PDO::FETCH_ASSOC);
 
@@ -45,13 +45,14 @@ if (isset($_POST['login'])) {
                 session_regenerate_id(true);
                 $_SESSION['username'] = $fetch['username'];
                 $_SESSION['user_id']  = $fetch['id'];
-                $_SESSION['is_admin'] = $fetch['is_admin'];
+                $_SESSION['is_admin'] = ($fetch['role'] === 'admin') ? 1 : 0; // maintain backward compatibility
+                $_SESSION['role']     = $fetch['role'];
 
                 // Invalidate old CSRF token
                 unset($_SESSION['csrf_token']);
 
                 // Admin goes to admin dashboard, regular users go to homepage
-                if ($fetch['is_admin'] == 1) {
+                if ($fetch['role'] === 'admin') {
                     header('Location: '.APPURL.'admin/');
                 } else {
                     // Validate redirect URL (prevent open redirect)
