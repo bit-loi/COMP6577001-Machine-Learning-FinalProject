@@ -12,7 +12,9 @@ if (strpos($currentPath, '/orders') !== false) $activeMenu = 'orders';
 elseif (strpos($currentPath, '/products') !== false) $activeMenu = 'products';
 elseif (strpos($currentPath, '/categories') !== false) $activeMenu = 'categories';
 elseif (strpos($currentPath, '/customers') !== false) $activeMenu = 'customers';
+elseif (strpos($currentPath, '/churn/predict_single') !== false) $activeMenu = 'churn_single';
 elseif (strpos($currentPath, '/churn') !== false) $activeMenu = 'churn';
+elseif (strpos($currentPath, '/fraud_check') !== false) $activeMenu = 'fraud_check';
 elseif (strpos($currentPath, '/simulation.php') !== false) $activeMenu = 'simulation';
 
 ?>
@@ -98,10 +100,15 @@ elseif (strpos($currentPath, '/simulation.php') !== false) $activeMenu = 'simula
         
         <div class="nav-section">Intelligence</div>
         <a href="<?php echo APPURL; ?>admin/churn/" class="nav-item <?php echo $activeMenu == 'churn' ? 'active' : ''; ?>">
-            <i data-lucide="user-minus"></i>
-            Churn Prediction
+            <i data-lucide="user-minus"></i> Churn Dashboard
         </a>
-        <a href="<?php echo APPURL; ?>admin/simulation.php" class="nav-item <?php echo $activeMenu == 'simulation' ? 'active' : ''; ?>"><i data-lucide="brain-circuit"></i> ML Simulation</a>
+        <a href="<?php echo APPURL; ?>admin/churn/predict_single.php" class="nav-item <?php echo $activeMenu == 'churn_single' ? 'active' : ''; ?>">
+            <i data-lucide="user-search"></i> Churn — Single Check
+        </a>
+        <a href="<?php echo APPURL; ?>admin/fraud_check.php" class="nav-item <?php echo $activeMenu == 'fraud_check' ? 'active' : ''; ?>">
+            <i data-lucide="shield-alert"></i> Fraud — Manual Check
+        </a>
+        <a href="<?php echo APPURL; ?>admin/simulation.php" class="nav-item <?php echo $activeMenu == 'simulation' ? 'active' : ''; ?>"><i data-lucide="brain-circuit"></i> Fraud — Live Sim</a>
 
         <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #f1f5f9;">
             <a href="<?php echo APPURL; ?>" target="_blank" class="nav-item"><i data-lucide="external-link"></i> View Store</a>
