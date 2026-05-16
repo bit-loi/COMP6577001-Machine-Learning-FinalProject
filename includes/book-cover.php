@@ -27,19 +27,21 @@ function getBookCover($isbn, $size = 'M') {
 }
 
 /**
- * Get book cover with automatic fallback to placeholder
+ * Get book cover smartly with basic empty check
  * 
  * @param string $isbn - Book ISBN
- * @param string $size - S, M, or L (default: M)
  * @param string $title - Book title (for placeholder text)
+ * @param string $size - S, M, or L (default: M)
  * @return string - Cover image URL
  */
-function getBookCoverWithFallback($isbn, $size = 'M', $title = 'No Cover') {
-    if (empty($isbn)) {
-        return getPlaceholderCover($title, $size);
+function getBookCoverSmart($isbn, $title, $size = 'M') {
+    if (!empty($isbn)) {
+        $isbn = str_replace(['-', ' '], '', $isbn);
+        $openLibrary = "https://covers.openlibrary.org/b/isbn/{$isbn}-{$size}.jpg?default=false";
+        return $openLibrary;
     }
     
-    return getBookCover($isbn, $size);
+    return getPlaceholderCover($title, $size);
 }
 
 /**
@@ -64,7 +66,7 @@ function getPlaceholderCover($text = 'No Cover', $size = 'M') {
     $bgColor = '0D1B2A';  // Dark ocean blue
     $textColor = '00D9FF'; // Cyan
     
-    return "https://via.placeholder.com/{$dim}/{$bgColor}/{$textColor}?text={$encodedText}";
+    return "https://placehold.co/{$dim}/{$bgColor}/{$textColor}?text={$encodedText}";
 }
 
 /**
@@ -78,7 +80,7 @@ function getPlaceholderCover($text = 'No Cover', $size = 'M') {
  * @return string - Complete HTML img tag
  */
 function getBookCoverImage($isbn, $title, $size = 'M', $class = '', $attributes = []) {
-    $coverUrl = getBookCoverWithFallback($isbn, $size, $title);
+    $coverUrl = getBookCoverSmart($isbn, $title, $size);
     $fallbackUrl = getPlaceholderCover($title, $size);
     
     $attrs = '';
@@ -106,7 +108,7 @@ function getBookCoverImage($isbn, $title, $size = 'M', $class = '', $attributes 
  */
 function bookCoverExists($isbn) {
     $isbn = str_replace(['-', ' '], '', $isbn);
-    $url = "https://covers.openlibrary.org/b/isbn/{$isbn}-S.jpg";
+    $url = "https://covers.openlibrary.org/b/isbn/{$isbn}-S.jpg?default=false";
     
     $headers = @get_headers($url);
     return $headers && strpos($headers[0], '200') !== false;
@@ -123,10 +125,10 @@ function getBatchBookCovers($products, $size = 'M') {
     $covers = [];
     
     foreach ($products as $product) {
-        $covers[$product->id] = getBookCoverWithFallback(
+        $covers[$product->id] = getBookCoverSmart(
             $product->isbn ?? '', 
-            $size, 
-            $product->name ?? 'No Cover'
+            $product->name ?? 'No Cover',
+            $size
         );
     }
     

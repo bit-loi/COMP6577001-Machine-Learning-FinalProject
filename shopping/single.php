@@ -1,6 +1,6 @@
-<?php require '../includes/header.php'; ?>
-<?php require '../config/config.php'; ?>
-<?php require '../includes/book-cover.php'; ?>
+<?php require_once '../includes/header.php'; ?>
+<?php require_once '../config/config.php'; ?>
+<?php require_once '../includes/product-image.php'; ?>
 
 <?php
     if(isset($_GET['id'])) {
@@ -20,6 +20,13 @@
         $stmtRel = $conn->prepare("SELECT * FROM products WHERE category_id = ? AND id != ? AND status = 1 LIMIT 4");
         $stmtRel->execute([$product->category_id, $id]);
         $related = $stmtRel->fetchAll(PDO::FETCH_OBJ);
+
+        // Real reviews
+        $stmtRev = $conn->prepare("SELECT AVG(rating) as avg_rating, COUNT(*) as review_count FROM reviews WHERE product_id = ? AND status = 1");
+        $stmtRev->execute([$id]);
+        $reviewData = $stmtRev->fetch(PDO::FETCH_OBJ);
+        $avgRating = $reviewData->avg_rating ? round($reviewData->avg_rating, 1) : 0;
+        $reviewCount = $reviewData->review_count ?? 0;
     } else {
         header("Location: " . APPURL);
         exit();
@@ -29,682 +36,186 @@
     $displayPrice = $hasDiscount ? $product->discount_price : $product->price;
     $originalPrice = $product->price;
     $savePct = $hasDiscount ? round((($originalPrice - $displayPrice) / $originalPrice) * 100) : 0;
-
-    // ── Wikipedia synopsis (Redis-cached, rate-limited) ──
-    require_once dirname(__DIR__) . '/includes/WikipediaService.php';
-
-    $dbDesc  = trim($product->description ?? '');
-    $useWiki = (strlen($dbDesc) < 80); // only hit Wikipedia when DB text is absent/short
-
-    $wikiSvc = new WikipediaService();
-    $synopsis = $wikiSvc->getSynopsis(
-        $product->name,
-        $product->author   ?? '',
-        $dbDesc                    // fallback text
-    );
-
-    // If DB description is rich enough, prefer it over Wikipedia
-    if (!$useWiki && $synopsis['source'] === 'wikipedia') {
-        $synopsis = [
-            'text'        => $dbDesc,
-            'source'      => 'db',
-            'pageUrl'     => '',
-            'pageTitle'   => '',
-            'cached'      => false,
-            'rateLimited' => false,
-        ];
-    }
 ?>
 
-
 <style>
-/* ─── Reset & base ───────────────────────────────── */
-#sp-page { background: #000; color: #fff; min-height: 100vh; }
-
-/* ─── Dark hero banner (2-col: info left, poster right) ─ */
-#sp-hero {
-    background: #000;
-    border-bottom: 1px solid rgba(255,255,255,0.07);
-    padding: 48px 0 0;
-    overflow: hidden;
-}
-#sp-hero-inner {
-    max-width: 1180px;
-    margin: 0 auto;
-    padding: 0 24px;
-    display: grid;
-    grid-template-columns: 1fr 260px;
-    gap: 48px;
-    align-items: end;
-}
-
-/* Hero left column */
-#sp-hero-info {
-    padding-bottom: 40px;
-    min-width: 0;
-}
-
-/* Hero right column — poster */
-#sp-hero-poster {
-    display: flex;
-    align-items: flex-end;
-    justify-content: center;
-    align-self: stretch;
-}
-
-/* ─── Breadcrumb ─────────────────────────────────── */
-.sp-breadcrumb {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 12px;
-    color: rgba(255,255,255,0.45);
-    margin-bottom: 18px;
-    flex-wrap: wrap;
-}
-.sp-breadcrumb a {
-    color: rgba(255,255,255,0.45);
-    text-decoration: none;
-    transition: color 0.2s;
-}
-.sp-breadcrumb a:hover { color: rgba(255,255,255,0.85); }
-.sp-breadcrumb-sep { opacity: 0.3; }
-
-/* ─── Labels row ─────────────────────────────────── */
-.sp-labels {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 14px;
-    flex-wrap: wrap;
-}
-.sp-label {
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    padding: 3px 10px;
-    border-radius: 4px;
-}
-.sp-label-cat  { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.55); border: 1px solid rgba(255,255,255,0.1); }
-.sp-label-feat { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.55); border: 1px solid rgba(255,255,255,0.1); }
-.sp-label-stock-ok  { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.55); border: 1px solid rgba(255,255,255,0.1); }
-.sp-label-stock-out { background: rgba(255,255,255,0.03); color: rgba(255,255,255,0.3);  border: 1px solid rgba(255,255,255,0.08); }
-
-/* ─── Title ──────────────────────────────────────── */
-#sp-title {
-    font-family: 'Playfair Display', Georgia, serif;
-    font-size: clamp(1.6rem, 3vw, 2.4rem);
-    font-weight: 700;
-    line-height: 1.18;
-    color: #fff;
-    margin: 0 0 14px;
-    letter-spacing: -0.01em;
-}
-
-/* ─── Author line ────────────────────────────────── */
-.sp-author {
-    font-size: 14px;
-    color: rgba(255,255,255,0.5);
-    margin-bottom: 20px;
-}
-.sp-author a { color: rgba(255,255,255,0.55); text-decoration: none; }
-.sp-author a:hover { color: #fff; text-decoration: underline; }
-
-/* ─── Star rating mock ───────────────────────────── */
-.sp-rating {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 20px;
-    font-size: 13px;
-}
-.sp-stars { color: rgba(255,255,255,0.7); letter-spacing: 2px; font-size: 14px; }
-.sp-rating-count { color: rgba(255,255,255,0.4); }
-
-/* ─── Meta pills row ─────────────────────────────── */
-.sp-meta-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 20px;
-    padding: 18px 0;
-    border-top: 1px solid rgba(255,255,255,0.07);
-    border-bottom: 1px solid rgba(255,255,255,0.07);
-    margin-bottom: 0;
-}
-.sp-meta-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 12px;
-    color: rgba(255,255,255,0.45);
-}
-.sp-meta-item i { width: 14px; height: 14px; }
-.sp-meta-item strong { color: rgba(255,255,255,0.8); font-weight: 500; }
-
-/* ─── Hero poster ───────────────────────────────── */
-.sp-hero-poster-img {
-    width: 100%;
-    max-width: 240px;
-    aspect-ratio: 2/3;
-    object-fit: cover;
-    display: block;
-    border-radius: 6px 6px 0 0;
-    box-shadow: -8px -8px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.06);
-    margin: 0 auto;
-}
-
-/* ─── Purchase card (sticky sidebar) ────────────── */
-#sp-card {
-    background: #0d0d0d;
-    border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 6px;
-    overflow: hidden;
-    position: sticky;
-    top: 88px;
-}
-.sp-card-body { padding: 22px; }
-
-.sp-price-main {
-    font-size: 2rem;
-    font-weight: 800;
-    color: #fff;
-    line-height: 1;
-    margin-bottom: 4px;
-}
-.sp-price-original {
-    font-size: 14px;
-    color: rgba(255,255,255,0.35);
-    text-decoration: line-through;
-    margin-right: 8px;
-}
-.sp-price-save {
-    font-size: 12px;
-    font-weight: 700;
-    color: rgba(255,255,255,0.5);
-}
-.sp-price-row {
-    display: flex;
-    align-items: center;
-    gap: 0;
-    margin-bottom: 16px;
-}
-
-/* CTA buttons */
-.sp-btn-primary {
-    display: block;
-    width: 100%;
-    padding: 14px;
-    background: #fff;
-    color: #1c1d1f;
-    font-size: 13px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-align: center;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background 0.2s, transform 0.15s;
-    text-decoration: none;
-    margin-bottom: 10px;
-}
-.sp-btn-primary:hover { background: #e5e5e5; transform: translateY(-1px); color: #1c1d1f; }
-
-.sp-btn-secondary {
-    display: block;
-    width: 100%;
-    padding: 13px;
-    background: transparent;
-    color: rgba(255,255,255,0.7);
-    font-size: 13px;
-    font-weight: 600;
-    text-align: center;
-    border: 1px solid rgba(255,255,255,0.2);
-    border-radius: 4px;
-    cursor: pointer;
-    transition: border-color 0.2s, color 0.2s;
-    text-decoration: none;
-    margin-bottom: 10px;
-}
-.sp-btn-secondary:hover { border-color: rgba(255,255,255,0.5); color: #fff; }
-
-/* Qty stepper */
-.sp-qty {
-    display: flex;
-    align-items: center;
-    border: 1px solid rgba(255,255,255,0.15);
-    border-radius: 4px;
-    overflow: hidden;
-    margin-bottom: 12px;
-}
-.sp-qty-btn {
-    width: 40px;
-    height: 40px;
-    background: rgba(255,255,255,0.05);
-    border: none;
-    color: #fff;
-    font-size: 16px;
-    cursor: pointer;
-    transition: background 0.2s;
-    flex-shrink: 0;
-}
-.sp-qty-btn:hover { background: rgba(255,255,255,0.1); }
-.sp-qty-input {
-    flex: 1;
-    background: transparent;
-    border: none;
-    color: #fff;
-    text-align: center;
-    font-size: 15px;
-    font-weight: 600;
-    outline: none;
-    padding: 0;
-}
-
-/* guarantees */
-.sp-guarantees {
-    margin-top: 14px;
-    border-top: 1px solid rgba(255,255,255,0.07);
-    padding-top: 14px;
-    display: flex;
-    flex-direction: column;
-    gap: 9px;
-}
-.sp-guarantee-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 11px;
-    color: rgba(255,255,255,0.4);
-}
-.sp-guarantee-item i { width: 14px; height: 14px; flex-shrink: 0; }
-
-/* ─── Body content area ──────────────────────────── */
-#sp-body {
-    max-width: 1180px;
-    margin: 0 auto;
-    padding: 36px 24px 80px;
-    display: grid;
-    grid-template-columns: 1fr 300px;
-    gap: 40px;
-    background: #000;
-    align-items: start;
-}
-#sp-content { min-width: 0; }
-
-/* Tabs */
-.sp-tabs {
-    display: flex;
-    gap: 0;
-    border-bottom: 1px solid rgba(255,255,255,0.08);
-    margin-bottom: 32px;
-}
-.sp-tab {
-    padding: 12px 20px;
-    font-size: 13px;
-    font-weight: 600;
-    color: rgba(255,255,255,0.4);
-    cursor: pointer;
-    border-bottom: 2px solid transparent;
-    transition: color 0.2s, border-color 0.2s;
-    background: none;
-    border-top: none;
-    border-left: none;
-    border-right: none;
-    white-space: nowrap;
-}
-.sp-tab.active, .sp-tab:hover { color: #fff; border-bottom-color: #fff; }
-
-.sp-tab-panel { display: none; }
-.sp-tab-panel.active { display: block; }
-
-/* Section titles */
-.sp-section-title {
-    font-size: 16px;
-    font-weight: 700;
-    color: #fff;
-    margin: 0 0 16px;
-    letter-spacing: -0.01em;
-}
-
-/* Description */
-.sp-description {
-    font-size: 14px;
-    line-height: 1.85;
-    color: rgba(255,255,255,0.55);
-}
-
-/* Book details table */
-.sp-details-table { width: 100%; border-collapse: collapse; }
-.sp-details-table tr { border-bottom: 1px solid rgba(255,255,255,0.06); }
-.sp-details-table tr:last-child { border-bottom: none; }
-.sp-details-table td {
-    padding: 12px 0;
-    font-size: 13px;
-}
-.sp-details-table td:first-child {
-    color: rgba(255,255,255,0.35);
-    width: 140px;
-    font-size: 12px;
-    letter-spacing: 0.03em;
-}
-.sp-details-table td:last-child { color: rgba(255,255,255,0.8); font-weight: 500; }
-
-/* What you learn checklist */
-.sp-checklist { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.sp-checklist li {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    font-size: 13px;
-    color: rgba(255,255,255,0.6);
-    line-height: 1.5;
-}
-.sp-checklist li i { color: rgba(255,255,255,0.4); flex-shrink: 0; margin-top: 2px; width: 14px; height: 14px; }
-
-/* ─── Related books ──────────────────────────────── */
-#sp-related {
-    border-top: 1px solid rgba(255,255,255,0.07);
-    padding: 40px 24px 80px;
-    max-width: 1180px;
-    margin: 0 auto;
-}
-.sp-related-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; margin-top: 20px; }
-.sp-related-card {
-    text-decoration: none;
-    display: block;
-    transition: transform 0.3s;
-}
-.sp-related-card:hover { transform: translateY(-4px); }
-.sp-related-cover {
-    width: 100%;
-    aspect-ratio: 3/4;
-    object-fit: cover;
-    border-radius: 4px;
-    background: #2d2f31;
-    display: block;
-    margin-bottom: 10px;
-}
-.sp-related-title { font-size: 13px; font-weight: 600; color: #fff; margin-bottom: 4px; line-height: 1.35; }
-.sp-related-author { font-size: 11px; color: rgba(255,255,255,0.35); margin-bottom: 6px; }
-.sp-related-price { font-size: 14px; font-weight: 700; color: #fff; }
-
-/* ─── Responsive ─────────────────────────────────── */
-@media (max-width: 1024px) {
-    #sp-hero-inner { grid-template-columns: 1fr 200px; gap: 32px; }
-}
-@media (max-width: 860px) {
-    #sp-hero-inner { grid-template-columns: 1fr; }
-    #sp-hero-poster { display: none; }
-    #sp-body { grid-template-columns: 1fr; }
-    #sp-card { position: static; }
-}
-@media (max-width: 600px) {
-    .sp-checklist { grid-template-columns: 1fr; }
-}
+    .product-page { background: #f5f5f5; min-height: 60vh; }
+    .product-grid { max-width: 1200px; margin: 0 auto; padding: 32px 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: start; }
+    .product-image-wrap { background: #fff; border-radius: 8px; overflow: hidden; border: 1px solid #f1f5f9; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; padding: 16px; }
+    .product-image-wrap img { width: 100%; height: 100%; object-fit: contain; mix-blend-mode: multiply; }
+    .product-info { padding: 8px 0; }
+    .product-brand { font-size: 0.8rem; color: #FF6B35; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+    .product-title { font-size: 1.6rem; font-weight: 800; color: #222; margin: 0 0 12px; line-height: 1.3; }
+    .product-rating { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+    .product-price { font-size: 2rem; font-weight: 800; color: #EE4D2D; margin-bottom: 4px; }
+    .product-original-price { font-size: 1rem; color: #bbb; text-decoration: line-through; }
+    .product-save-badge { font-size: 0.75rem; font-weight: 700; background: #FEE2E2; color: #EE4D2D; padding: 4px 10px; border-radius: 6px; }
+    .btn-add-cart { display: block; width: 100%; padding: 16px; background: #FF6B35; color: white; font-size: 0.9rem; font-weight: 700; border: none; border-radius: 12px; cursor: pointer; transition: background 0.2s; text-align: center; }
+    .btn-add-cart:hover { background: #EE4D2D; }
+    .product-meta { border-top: 1px solid #eee; padding-top: 20px; margin-top: 20px; }
+    .meta-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f5f5f5; font-size: 0.85rem; }
+    .meta-label { color: #999; }
+    .meta-value { color: #333; font-weight: 500; }
+    .related-section { max-width: 1200px; margin: 0 auto; padding: 0 24px 64px; }
+    .related-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    @media (min-width: 640px) { .related-grid { grid-template-columns: repeat(3, 1fr); gap: 12px; } }
+    @media (min-width: 1024px) { .related-grid { grid-template-columns: repeat(5, 1fr); gap: 16px; } }
+    .related-card { background: #fff; border-radius: 4px; overflow: hidden; text-decoration: none; transition: transform 0.2s ease, box-shadow 0.2s ease; display: flex; flex-direction: column; height: 100%; border: 1px solid #f0f0f0; }
+    .related-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-color: #EE4D2D; z-index: 2; }
+    .related-img-wrap { position: relative; aspect-ratio: 1; background: #f8fafc; display: flex; align-items: center; justify-content: center; padding: 4px; }
+    .related-img-wrap img { width: 100%; height: 100%; object-fit: contain; mix-blend-mode: multiply; }
+    .related-info { padding: 10px; display: flex; flex-direction: column; flex-grow: 1; }
+    .related-title { font-size: 0.85rem; color: #222; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 8px; min-height: 38px; }
+    .related-price { font-size: 1.1rem; font-weight: 700; color: #EE4D2D; }
+    @media (max-width: 768px) { .product-grid { grid-template-columns: 1fr; gap: 24px; } }
 </style>
 
-<div id="sp-page">
-
-<!-- ══ HERO BANNER (2-col: info left │ poster right) ══════════ -->
-<div id="sp-hero">
-    <div id="sp-hero-inner">
-
-        <!-- LEFT: info -->
-        <div id="sp-hero-info">
-            <!-- Breadcrumb -->
-            <nav class="sp-breadcrumb">
-                <a href="<?php echo APPURL; ?>">Home</a>
-                <span class="sp-breadcrumb-sep">/</span>
-                <a href="<?php echo APPURL; ?>categories/index.php">Categories</a>
-                <?php if($product->category_name): ?>
-                    <span class="sp-breadcrumb-sep">/</span>
-                    <a href="<?php echo APPURL; ?>categories/category.php?id=<?php echo $product->category_id; ?>">
-                        <?php echo htmlspecialchars($product->category_name); ?>
-                    </a>
-                <?php endif; ?>
-                <span class="sp-breadcrumb-sep">/</span>
-                <span style="color:rgba(255,255,255,0.6);"><?php echo htmlspecialchars(mb_strimwidth($product->name, 0, 40, '…')); ?></span>
-            </nav>
-
-            <!-- Labels -->
-            <div class="sp-labels">
-                <?php if($product->category_name): ?>
-                    <span class="sp-label sp-label-cat"><?php echo htmlspecialchars($product->category_name); ?></span>
-                <?php endif; ?>
-                <?php if(isset($product->featured) && $product->featured): ?>
-                    <span class="sp-label sp-label-feat">★ Featured</span>
-                <?php endif; ?>
-                <?php if($product->stock > 0): ?>
-                    <span class="sp-label sp-label-stock-ok">● In Stock</span>
-                <?php else: ?>
-                    <span class="sp-label sp-label-stock-out">✕ Out of Stock</span>
-                <?php endif; ?>
-            </div>
-
-            <!-- Title -->
-            <h1 id="sp-title"><?php echo htmlspecialchars($product->name); ?></h1>
-
-            <!-- Author -->
-            <?php if(isset($product->author) && $product->author): ?>
-                <p class="sp-author">
-                    by <a href="#"><?php echo htmlspecialchars($product->author); ?></a>
-                </p>
+<div class="product-page">
+    <!-- Breadcrumb -->
+    <div style="max-width: 1200px; margin: 0 auto; padding: 20px 24px 0;">
+        <nav style="font-size: 0.8rem; color: #999;">
+            <a href="<?php echo APPURL; ?>" style="color: #999; text-decoration: none;">Home</a>
+            <span style="margin: 0 8px;">/</span>
+            <a href="<?php echo APPURL; ?>categories/index.php" style="color: #999; text-decoration: none;">Categories</a>
+            <?php if($product->category_name): ?>
+                <span style="margin: 0 8px;">/</span>
+                <span style="color: #555;"><?php echo htmlspecialchars($product->category_name); ?></span>
             <?php endif; ?>
-
-            <!-- Mock rating -->
-            <div class="sp-rating">
-                <span class="sp-stars">★★★★★</span>
-                <span style="font-size:13px;color:rgba(255,255,255,0.65);font-weight:600;">5.0</span>
-                <span class="sp-rating-count">(<?php echo rand(120, 980); ?> ratings)</span>
-                <span style="color:rgba(255,255,255,0.2);">·</span>
-                <span style="font-size:12px;color:rgba(255,255,255,0.35);"><?php echo $product->stock; ?> in stock</span>
-            </div>
-
-            <!-- Meta row -->
-            <div class="sp-meta-row">
-                <?php if(isset($product->publisher) && $product->publisher): ?>
-                    <div class="sp-meta-item">
-                        <i data-lucide="building-2"></i>
-                        <span>Published by <strong><?php echo htmlspecialchars($product->publisher); ?></strong></span>
-                    </div>
-                <?php endif; ?>
-                <?php if(isset($product->pages) && $product->pages): ?>
-                    <div class="sp-meta-item">
-                        <i data-lucide="book-open"></i>
-                        <span><strong><?php echo $product->pages; ?></strong> pages</span>
-                    </div>
-                <?php endif; ?>
-                <?php if(isset($product->language) && $product->language): ?>
-                    <div class="sp-meta-item">
-                        <i data-lucide="globe"></i>
-                        <span><strong><?php echo htmlspecialchars($product->language); ?></strong></span>
-                    </div>
-                <?php endif; ?>
-                <?php if(isset($product->isbn) && $product->isbn): ?>
-                    <div class="sp-meta-item">
-                        <i data-lucide="barcode"></i>
-                        <span>ISBN <strong><?php echo htmlspecialchars($product->isbn); ?></strong></span>
-                    </div>
-                <?php endif; ?>
-            </div>
-        </div>
-
-        <!-- RIGHT: Book cover poster (flush to bottom of hero) -->
-        <div id="sp-hero-poster">
-            <?php echo getBookCoverImage(
-                $product->isbn ?? '',
-                $product->name,
-                'L',
-                'sp-hero-poster-img'
-            ); ?>
-        </div>
-
+        </nav>
     </div>
-</div>
 
-<!-- ══ BODY ══════════════════════════════════════════════════ -->
-<div id="sp-body">
-
-    <!-- ── LEFT: Tabs & Content ── -->
-    <div id="sp-content">
-
-        <!-- What you'll get -->
-        <div style="background:#0d0d0d;border:1px solid rgba(255,255,255,0.07);border-radius:6px;padding:24px;margin-bottom:28px;">
-            <p class="sp-section-title" style="margin-bottom:12px;">What you'll get</p>
-            <ul class="sp-checklist">
-                <li><i data-lucide="check"></i> Physical hardcover edition</li>
-                <li><i data-lucide="check"></i> Full narrative access</li>
-                <li><i data-lucide="check"></i> Free shipping on $50+</li>
-                <li><i data-lucide="check"></i> 30-day return policy</li>
-                <li><i data-lucide="check"></i> Authenticated &amp; verified</li>
-                <li><i data-lucide="check"></i> Gift-ready packaging</li>
-            </ul>
+    <div class="product-grid">
+        <!-- Image -->
+        <div class="product-image-wrap">
+            <?php echo getProductImage($product, '600x600', '', ['style' => 'width:100%; height:100%; object-fit:cover;']); ?>
         </div>
 
-        <!-- Tabs -->
-        <div class="sp-tabs" role="tablist">
-            <button class="sp-tab active" onclick="switchTab(event,'tab-desc')">Description</button>
-            <button class="sp-tab" onclick="switchTab(event,'tab-details')">Book Details</button>
-        </div>
+        <!-- Info -->
+        <div class="product-info">
+            <?php if($product->brand): ?>
+                <div class="product-brand"><?php echo htmlspecialchars($product->brand); ?></div>
+            <?php endif; ?>
+            
+            <h1 class="product-title"><?php echo htmlspecialchars($product->name); ?></h1>
 
-        <!-- Description tab -->
-        <div id="tab-desc" class="sp-tab-panel active">
-            <?php if($synopsis['text']): ?>
-                <p class="sp-description"><?php echo nl2br(htmlspecialchars($synopsis['text'])); ?></p>
-                <?php if($synopsis['source'] === 'wikipedia' && $synopsis['pageUrl']): ?>
-                    <div style="margin-top:20px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;gap:8px;">
-                        <span style="font-size:11px;color:rgba(255,255,255,0.2);font-family:'JetBrains Mono',monospace;">Synopsis via</span>
-                        <a href="<?php echo htmlspecialchars($synopsis['pageUrl']); ?>" target="_blank" rel="noopener"
-                           style="font-size:11px;color:rgba(255,255,255,0.35);font-family:'JetBrains Mono',monospace;text-decoration:none;letter-spacing:0.05em;">Wikipedia &nearr;</a>
-                        <?php if($synopsis['cached']): ?>
-                            <span style="font-size:10px;color:rgba(255,255,255,0.12);font-family:'JetBrains Mono',monospace;margin-left:auto;">CACHED</span>
-                        <?php endif; ?>
-                    </div>
+            <!-- Rating -->
+            <div class="product-rating">
+                <?php if($reviewCount > 0): ?>
+                    <span style="color: #EAB308;">★</span>
+                    <span style="font-size: 0.9rem; font-weight: 600; color: #333;"><?php echo $avgRating; ?></span>
+                    <span style="font-size: 0.8rem; color: #999;">(<?php echo $reviewCount; ?> reviews)</span>
+                <?php else: ?>
+                    <span style="font-size: 0.8rem; color: #aaa;">No reviews yet</span>
                 <?php endif; ?>
+                <span style="color: #ddd;">•</span>
+                <span style="font-size: 0.8rem; color: <?php echo $product->stock > 0 ? '#059669' : '#DC2626'; ?>; font-weight: 500;">
+                    <?php echo $product->stock > 0 ? $product->stock . ' in stock' : 'Out of stock'; ?>
+                </span>
+            </div>
+
+            <!-- Price -->
+            <div class="product-price">$<?php echo number_format($displayPrice, 2); ?></div>
+            <?php if($hasDiscount): ?>
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px;">
+                    <span class="product-original-price">$<?php echo number_format($originalPrice, 2); ?></span>
+                    <span class="product-save-badge">SAVE <?php echo $savePct; ?>%</span>
+                </div>
             <?php else: ?>
-                <p class="sp-description" style="opacity:0.3;">No description available.</p>
+                <div style="margin-bottom: 20px;"></div>
             <?php endif; ?>
-        </div>
 
-        <!-- Details tab -->
-        <div id="tab-details" class="sp-tab-panel">
-            <table class="sp-details-table">
-                <?php if(isset($product->publisher) && $product->publisher): ?>
-                <tr><td>Publisher</td><td><?php echo htmlspecialchars($product->publisher); ?></td></tr>
-                <?php endif; ?>
-                <?php if(isset($product->pages) && $product->pages): ?>
-                <tr><td>Pages</td><td><?php echo $product->pages; ?> pages</td></tr>
-                <?php endif; ?>
-                <?php if(isset($product->language) && $product->language): ?>
-                <tr><td>Language</td><td><?php echo htmlspecialchars($product->language); ?></td></tr>
-                <?php endif; ?>
-                <?php if(isset($product->isbn) && $product->isbn): ?>
-                <tr><td>ISBN</td><td><?php echo htmlspecialchars($product->isbn); ?></td></tr>
-                <?php endif; ?>
-                <?php if($product->category_name): ?>
-                <tr><td>Category</td><td><?php echo htmlspecialchars($product->category_name); ?></td></tr>
-                <?php endif; ?>
-                <tr><td>Stock</td><td><?php echo $product->stock; ?> available</td></tr>
-            </table>
-        </div>
-    </div>
+            <!-- Description -->
+            <?php if($product->description): ?>
+                <p style="font-size: 0.9rem; color: #666; line-height: 1.8; margin-bottom: 24px;"><?php echo nl2br(htmlspecialchars($product->description)); ?></p>
+            <?php endif; ?>
 
-    <!-- ── RIGHT: Sticky Purchase Card (no cover image — it's in the hero) ── -->
-    <div>
-        <div id="sp-card">
-            <div class="sp-card-body">
-                <!-- Price -->
-                <div class="sp-price-main">$<?php echo number_format($displayPrice, 2); ?></div>
-                <?php if($hasDiscount): ?>
-                    <div style="margin-bottom:16px;display:flex;align-items:center;gap:8px;">
-                        <span class="sp-price-original">$<?php echo number_format($originalPrice, 2); ?></span>
-                        <span class="sp-price-save">SAVE <?php echo $savePct; ?>%</span>
-                    </div>
-                <?php else: ?>
-                    <div style="margin-bottom:16px;"></div>
-                <?php endif; ?>
-
-                <?php if($product->stock > 0): ?>
-                    <!-- Qty stepper -->
-                    <div class="sp-qty">
-                        <button class="sp-qty-btn" onclick="adjustQty(-1)">−</button>
-                        <input class="sp-qty-input" id="sp-qty-val" type="number" value="1" min="1" max="<?php echo $product->stock; ?>" readonly>
-                        <button class="sp-qty-btn" onclick="adjustQty(1)">+</button>
-                    </div>
-
-                    <!-- Add to Cart -->
-                    <form method="POST" action="<?php echo APPURL; ?>shopping/cart.php">
-                        <input type="hidden" name="product_id" value="<?php echo $product->id; ?>">
-                        <input type="hidden" name="quantity" id="form-qty" value="1">
-                        <button type="submit" name="add_to_cart" class="sp-btn-primary">
-                            Add to Cart
-                        </button>
-                    </form>
-
-                    <button class="sp-btn-secondary">
-                        <span style="display:flex;align-items:center;justify-content:center;gap:8px;">
-                            <i data-lucide="heart" style="width:14px;height:14px;"></i> Add to Wishlist
-                        </span>
-                    </button>
-
-                    <p style="text-align:center;font-size:11px;color:rgba(255,255,255,0.25);margin-top:4px;">
-                        30-Day Money-Back Guarantee
-                    </p>
-
-                <?php else: ?>
-                    <button class="sp-btn-primary" disabled style="opacity:0.4;cursor:not-allowed;">Out of Stock</button>
-                    <p style="text-align:center;font-size:11px;color:rgba(255,255,255,0.25);margin-top:8px;">This item is currently unavailable</p>
-                <?php endif; ?>
-
-                <!-- Guarantees -->
-                <div class="sp-guarantees">
-                    <div class="sp-guarantee-item">
-                        <i data-lucide="truck"></i>
-                        <span>Free shipping on orders over $50</span>
-                    </div>
-                    <div class="sp-guarantee-item">
-                        <i data-lucide="rotate-ccw"></i>
-                        <span>30-day hassle-free returns</span>
-                    </div>
-                    <div class="sp-guarantee-item">
-                        <i data-lucide="shield-check"></i>
-                        <span>Authenticated &amp; verified edition</span>
-                    </div>
-                    <div class="sp-guarantee-item">
-                        <i data-lucide="headphones"></i>
-                        <span>24/7 customer support</span>
+            <?php if($product->stock > 0): ?>
+                <!-- Quantity -->
+                <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 20px;">
+                    <span style="font-size: 0.85rem; font-weight: 600; color: #555;">Quantity:</span>
+                    <div style="display: flex; align-items: center; border: 1px solid #ddd; border-radius: 10px; overflow: hidden;">
+                        <button onclick="adjustQty(-1)" style="width: 40px; height: 40px; background: #f5f5f5; border: none; cursor: pointer; font-size: 16px; color: #555;">−</button>
+                        <input id="sp-qty-val" type="number" value="1" min="1" max="<?php echo $product->stock; ?>" readonly style="width: 50px; text-align: center; border: none; font-size: 0.9rem; font-weight: 600; background: transparent; outline: none;">
+                        <button onclick="adjustQty(1)" style="width: 40px; height: 40px; background: #f5f5f5; border: none; cursor: pointer; font-size: 16px; color: #555;">+</button>
                     </div>
                 </div>
+
+                <form method="POST" action="<?php echo APPURL; ?>shopping/cart.php">
+                    <input type="hidden" name="product_id" value="<?php echo $product->id; ?>">
+                    <input type="hidden" name="quantity" id="form-qty" value="1">
+                    <button type="submit" name="add_to_cart" class="btn-add-cart">
+                        <i data-lucide="shopping-cart" style="width:16px;height:16px;display:inline;vertical-align:middle;margin-right:8px;"></i>Add to Cart
+                    </button>
+                </form>
+            <?php else: ?>
+                <button class="btn-add-cart" disabled style="opacity: 0.4; cursor: not-allowed;">Out of Stock</button>
+            <?php endif; ?>
+
+            <!-- Product Details -->
+            <div class="product-meta">
+                <h3 style="font-size: 0.9rem; font-weight: 700; color: #333; margin: 0 0 12px;">Product Details</h3>
+                <?php if($product->sku): ?>
+                    <div class="meta-row"><span class="meta-label">SKU</span><span class="meta-value"><?php echo htmlspecialchars($product->sku); ?></span></div>
+                <?php endif; ?>
+                <?php if($product->brand): ?>
+                    <div class="meta-row"><span class="meta-label">Brand</span><span class="meta-value"><?php echo htmlspecialchars($product->brand); ?></span></div>
+                <?php endif; ?>
+                <?php if($product->supplier): ?>
+                    <div class="meta-row"><span class="meta-label">Supplier</span><span class="meta-value"><?php echo htmlspecialchars($product->supplier); ?></span></div>
+                <?php endif; ?>
+                <?php if($product->category_name): ?>
+                    <div class="meta-row"><span class="meta-label">Category</span><span class="meta-value"><?php echo htmlspecialchars($product->category_name); ?></span></div>
+                <?php endif; ?>
+                <div class="meta-row"><span class="meta-label">Availability</span><span class="meta-value"><?php echo $product->stock; ?> units</span></div>
+            </div>
+
+            <!-- Guarantees -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 24px;">
+                <div style="display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: #888;"><i data-lucide="truck" style="width:14px;height:14px;color:#FF6B35;"></i> Free shipping $50+</div>
+                <div style="display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: #888;"><i data-lucide="rotate-ccw" style="width:14px;height:14px;color:#FF6B35;"></i> 30-day returns</div>
+                <div style="display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: #888;"><i data-lucide="shield-check" style="width:14px;height:14px;color:#FF6B35;"></i> Buyer protection</div>
+                <div style="display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: #888;"><i data-lucide="headphones" style="width:14px;height:14px;color:#FF6B35;"></i> 24/7 support</div>
             </div>
         </div>
     </div>
 
-</div><!-- #sp-body -->
-
-<!-- ══ RELATED BOOKS ══════════════════════════════════════════ -->
-<?php if($related): ?>
-<div id="sp-related">
-    <p class="sp-section-title">More from this category</p>
-    <div class="sp-related-grid">
-        <?php foreach($related as $rel): ?>
-            <a href="single.php?id=<?php echo $rel->id; ?>" class="sp-related-card">
-                <?php echo getBookCoverImage($rel->isbn ?? '', $rel->name, 'M', 'sp-related-cover'); ?>
-                <p class="sp-related-title"><?php echo htmlspecialchars(mb_strimwidth($rel->name, 0, 45, '…')); ?></p>
-                <?php if(isset($rel->author) && $rel->author): ?>
-                    <p class="sp-related-author"><?php echo htmlspecialchars($rel->author); ?></p>
-                <?php endif; ?>
-                <p class="sp-related-price">$<?php echo number_format($rel->price, 2); ?></p>
+    <!-- Related Products -->
+    <?php if($related): ?>
+    <div class="related-section">
+        <h2 style="font-size: 1.3rem; font-weight: 800; color: #222; margin-bottom: 20px;">You May Also Like</h2>
+        <div class="related-grid">
+            <?php foreach($related as $rel): 
+                $hasDiscount = !empty($rel->discount_price) && $rel->discount_price > 0;
+                $displayPrice = $hasDiscount ? $rel->discount_price : $rel->price;
+                $savePct = $hasDiscount ? round((($rel->price - $displayPrice) / $rel->price) * 100) : 0;
+            ?>
+            <a href="single.php?id=<?php echo $rel->id; ?>" class="related-card">
+                <div class="related-img-wrap">
+                    <?php echo getProductImage($rel, '300x300'); ?>
+                    <?php if($hasDiscount): ?>
+                        <span style="position: absolute; top: 0; right: 0; background: #EE4D2D; color: white; font-size: 0.7rem; font-weight: 700; padding: 3px 6px; border-bottom-left-radius: 4px;">-<?php echo $savePct; ?>%</span>
+                    <?php endif; ?>
+                </div>
+                <div class="related-info">
+                    <?php if($rel->brand): ?>
+                        <div style="font-size: 10px; color: #aaa; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;"><?php echo htmlspecialchars($rel->brand); ?></div>
+                    <?php endif; ?>
+                    <div class="related-title"><?php echo htmlspecialchars($rel->name); ?></div>
+                    <div style="margin-top: auto;">
+                        <span class="related-price">$<?php echo number_format($displayPrice, 2); ?></span>
+                        <?php if($hasDiscount): ?>
+                            <span style="font-size: 0.75rem; color: #999; text-decoration: line-through; margin-left: 4px;">$<?php echo number_format($rel->price, 2); ?></span>
+                        <?php endif; ?>
+                    </div>
+                </div>
             </a>
-        <?php endforeach; ?>
+            <?php endforeach; ?>
+        </div>
     </div>
+    <?php endif; ?>
 </div>
-<?php endif; ?>
-
-</div><!-- #sp-page -->
 
 <script>
-// ── Qty stepper ────────────────────────────────────
 function adjustQty(delta) {
     const input = document.getElementById('sp-qty-val');
     const formQty = document.getElementById('form-qty');
@@ -714,15 +225,6 @@ function adjustQty(delta) {
     val = Math.max(1, Math.min(max, val));
     input.value = val;
     if (formQty) formQty.value = val;
-}
-
-// ── Tab switching ──────────────────────────────────
-function switchTab(e, panelId) {
-    document.querySelectorAll('.sp-tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.sp-tab-panel').forEach(p => p.classList.remove('active'));
-    e.currentTarget.classList.add('active');
-    const panel = document.getElementById(panelId);
-    if (panel) panel.classList.add('active');
 }
 </script>
 

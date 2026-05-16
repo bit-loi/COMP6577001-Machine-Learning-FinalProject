@@ -33,8 +33,8 @@ RUN echo '<Directory /var/www/html/>\n\
     Options Indexes FollowSymLinks\n\
     AllowOverride All\n\
     Require all granted\n\
-</Directory>' > /etc/apache2/conf-available/bookstore.conf \
-    && a2enconf bookstore
+</Directory>' > /etc/apache2/conf-available/shopmart.conf \
+    && a2enconf shopmart
 
 # Expose port 80
 EXPOSE 80

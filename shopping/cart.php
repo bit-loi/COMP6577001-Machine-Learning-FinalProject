@@ -2,227 +2,106 @@
 session_start();
 require '../config/config.php';
 require '../middleware/auth.php';
+require '../includes/product-image.php';
+
+// Handle add to cart
+if (isset($_POST['add_to_cart']) && isset($_POST['product_id'])) {
+    $productId = (int)$_POST['product_id'];
+    $quantity = max(1, (int)($_POST['quantity'] ?? 1));
+    $userId = $_SESSION['user_id'];
+    
+    // Check if item already in cart
+    $stmt = $conn->prepare("SELECT id, quantity FROM cart WHERE user_id = ? AND product_id = ?");
+    $stmt->execute([$userId, $productId]);
+    $existing = $stmt->fetch(PDO::FETCH_OBJ);
+    
+    if ($existing) {
+        $stmt = $conn->prepare("UPDATE cart SET quantity = quantity + ? WHERE id = ?");
+        $stmt->execute([$quantity, $existing->id]);
+    } else {
+        $stmt = $conn->prepare("INSERT INTO cart (user_id, product_id, quantity) VALUES (?, ?, ?)");
+        $stmt->execute([$userId, $productId, $quantity]);
+    }
+}
+
+// Handle remove from cart
+if (isset($_GET['remove'])) {
+    $cartId = (int)$_GET['remove'];
+    $stmt = $conn->prepare("DELETE FROM cart WHERE id = ? AND user_id = ?");
+    $stmt->execute([$cartId, $_SESSION['user_id']]);
+    header("Location: cart.php");
+    exit;
+}
+
+// Fetch cart items
+$stmt = $conn->prepare("SELECT c.*, p.name, p.price, p.discount_price, p.image, p.stock, p.brand FROM cart c JOIN products p ON c.product_id = p.id WHERE c.user_id = ? ORDER BY c.created_at DESC");
+$stmt->execute([$_SESSION['user_id']]);
+$cartItems = $stmt->fetchAll(PDO::FETCH_OBJ);
+
+$subtotal = 0;
+foreach ($cartItems as $item) {
+    $itemPrice = ($item->discount_price && $item->discount_price > 0) ? $item->discount_price : $item->price;
+    $subtotal += $itemPrice * $item->quantity;
+}
+$tax = round($subtotal * 0.1, 2);
+$shipping = $subtotal >= 50 ? 0 : 5.99;
+$total = $subtotal + $tax + $shipping;
 ?>
 <?php include '../includes/header.php'; ?>
 
-<?php
-    // TODO: Fetch real cart items from database
-    // For now using dummy data
-    $cartItems = []; // Will be populated from database
-?>
+<div style="background: #f5f5f5; min-height: 60vh; padding: 40px 0;">
+    <div class="max-w-7xl mx-auto px-6 lg:px-12">
+        <h1 style="font-size: 1.5rem; font-weight: 800; color: #222; margin-bottom: 32px;">Shopping Cart</h1>
 
-<div class="container my-5">
-    
-    <!-- Page Header -->
-    <div class="text-center mb-5">
-        <h1 class="display-4 mb-3">
-            <span class="gradient-text">Shopping Cart</span>
-        </h1>
-        <p class="lead text-muted">Review your items before checkout</p>
-    </div>
-
-    <div class="row g-4">
-        
-        <!-- Cart Items -->
-        <div class="col-lg-8">
-            <div class="card shadow-sm border-0">
-                <div class="card-header bg-white py-3">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0 fw-bold">Cart Items</h5>
-                        <span class="badge badge-primary px-3 py-2">3 Items</span>
+        <?php if($cartItems): ?>
+        <div style="display: grid; grid-template-columns: 1fr 380px; gap: 24px; align-items: start;">
+            <!-- Cart Items -->
+            <div style="background: #fff; border-radius: 16px; border: 1px solid #eee; overflow: hidden;">
+                <?php foreach($cartItems as $item):
+                    $itemPrice = ($item->discount_price && $item->discount_price > 0) ? $item->discount_price : $item->price;
+                ?>
+                <div style="display: flex; align-items: center; gap: 16px; padding: 20px 24px; border-bottom: 1px solid #f5f5f5;">
+                    <div style="width: 80px; height: 80px; border-radius: 12px; overflow: hidden; background: #f9f9f9; flex-shrink: 0;">
+                        <?php echo getProductImage($item, '160x160', '', ['style' => 'width:100%; height:100%; object-fit:cover;']); ?>
+                    </div>
+                    <div style="flex: 1; min-width: 0;">
+                        <div style="font-size: 0.9rem; font-weight: 600; color: #333;"><?php echo htmlspecialchars($item->name); ?></div>
+                        <?php if($item->brand): ?>
+                            <div style="font-size: 0.75rem; color: #aaa;"><?php echo htmlspecialchars($item->brand); ?></div>
+                        <?php endif; ?>
+                        <div style="font-size: 0.85rem; color: #555; margin-top: 4px;">Qty: <?php echo $item->quantity; ?></div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 1rem; font-weight: 700; color: #EE4D2D;">$<?php echo number_format($itemPrice * $item->quantity, 2); ?></div>
+                        <a href="cart.php?remove=<?php echo $item->id; ?>" style="font-size: 0.75rem; color: #ef4444; text-decoration: none; margin-top: 4px; display: block;">Remove</a>
                     </div>
                 </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover mb-0">
-                            <thead class="bg-light">
-                                <tr>
-                                    <th scope="col" class="border-0" style="width: 80px;"></th>
-                                    <th scope="col" class="border-0">Product</th>
-                                    <th scope="col" class="border-0">Price</th>
-                                    <th scope="col" class="border-0" style="width: 140px;">Quantity</th>
-                                    <th scope="col" class="border-0">Subtotal</th>
-                                    <th scope="col" class="border-0" style="width: 80px;"></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <!-- Sample Cart Item 1 -->
-                                <tr>
-                                    <td class="align-middle">
-                                        <img src="https://via.placeholder.com/100x140/667eea/ffffff?text=Book+1" 
-                                             class="img-fluid rounded" 
-                                             alt="Book"
-                                             style="width: 60px; height: 80px; object-fit: cover;">
-                                    </td>
-                                    <td class="align-middle">
-                                        <h6 class="mb-1 fw-bold">The Great Gatsby</h6>
-                                        <small class="text-muted">by F. Scott Fitzgerald</small>
-                                    </td>
-                                    <td class="align-middle fw-bold">$12.99</td>
-                                    <td class="align-middle">
-                                        <div class="input-group input-group-sm" style="max-width: 130px;">
-                                            <button class="btn btn-outline-secondary" type="button">
-                                                <i class="fas fa-minus"></i>
-                                            </button>
-                                            <input type="number" class="form-control text-center" value="1" min="1">
-                                            <button class="btn btn-outline-secondary" type="button">
-                                                <i class="fas fa-plus"></i>
-                                            </button>
-                                        </div>
-                                    </td>
-                                    <td class="align-middle fw-bold text-primary">$12.99</td>
-                                    <td class="align-middle text-center">
-                                        <button class="btn btn-sm btn-danger" title="Remove">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </td>
-                                </tr>
-
-                                <!-- Sample Cart Item 2 -->
-                                <tr>
-                                    <td class="align-middle">
-                                        <img src="https://via.placeholder.com/100x140/f5576c/ffffff?text=Book+2" 
-                                             class="img-fluid rounded" 
-                                             alt="Book"
-                                             style="width: 60px; height: 80px; object-fit: cover;">
-                                    </td>
-                                    <td class="align-middle">
-                                        <h6 class="mb-1 fw-bold">To Kill a Mockingbird</h6>
-                                        <small class="text-muted">by Harper Lee</small>
-                                    </td>
-                                    <td class="align-middle fw-bold">$14.99</td>
-                                    <td class="align-middle">
-                                        <div class="input-group input-group-sm" style="max-width: 130px;">
-                                            <button class="btn btn-outline-secondary" type="button">
-                                                <i class="fas fa-minus"></i>
-                                            </button>
-                                            <input type="number" class="form-control text-center" value="2" min="1">
-                                            <button class="btn btn-outline-secondary" type="button">
-                                                <i class="fas fa-plus"></i>
-                                            </button>
-                                        </div>
-                                    </td>
-                                    <td class="align-middle fw-bold text-primary">$29.98</td>
-                                    <td class="align-middle text-center">
-                                        <button class="btn btn-sm btn-danger" title="Remove">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </td>
-                                </tr>
-
-                                <!-- Sample Cart Item 3 -->
-                                <tr>
-                                    <td class="align-middle">
-                                        <img src="https://via.placeholder.com/100x140/4facfe/ffffff?text=Book+3" 
-                                             class="img-fluid rounded" 
-                                             alt="Book"
-                                             style="width: 60px; height: 80px; object-fit: cover;">
-                                    </td>
-                                    <td class="align-middle">
-                                        <h6 class="mb-1 fw-bold">1984</h6>
-                                        <small class="text-muted">by George Orwell</small>
-                                    </td>
-                                    <td class="align-middle fw-bold">$13.99</td>
-                                    <td class="align-middle">
-                                        <div class="input-group input-group-sm" style="max-width: 130px;">
-                                            <button class="btn btn-outline-secondary" type="button">
-                                                <i class="fas fa-minus"></i>
-                                            </button>
-                                            <input type="number" class="form-control text-center" value="1" min="1">
-                                            <button class="btn btn-outline-secondary" type="button">
-                                                <i class="fas fa-plus"></i>
-                                            </button>
-                                        </div>
-                                    </td>
-                                    <td class="align-middle fw-bold text-primary">$13.99</td>
-                                    <td class="align-middle text-center">
-                                        <button class="btn btn-sm btn-danger" title="Remove">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+                <?php endforeach; ?>
+                <div style="padding: 16px 24px;">
+                    <a href="<?php echo APPURL; ?>" style="font-size: 0.85rem; color: #FF6B35; text-decoration: none; font-weight: 600;">← Continue Shopping</a>
                 </div>
-                <div class="card-footer bg-white py-3">
-                    <div class="d-flex justify-content-between">
-                        <a href="<?php echo APPURL; ?>" class="btn btn-outline-primary">
-                            <i class="fas fa-arrow-left me-2"></i>Continue Shopping
-                        </a>
-                        <button class="btn btn-outline-danger">
-                            <i class="fas fa-trash me-2"></i>Clear Cart
-                        </button>
-                    </div>
-                </div>
+            </div>
+
+            <!-- Order Summary -->
+            <div style="background: #fff; border-radius: 16px; border: 1px solid #eee; padding: 24px; position: sticky; top: 100px;">
+                <h3 style="font-size: 1rem; font-weight: 700; color: #222; margin: 0 0 20px;">Order Summary</h3>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 12px;"><span style="color: #888;">Subtotal (<?php echo count($cartItems); ?> items)</span><span style="font-weight: 600;">$<?php echo number_format($subtotal, 2); ?></span></div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 12px;"><span style="color: #888;">Shipping</span><span style="font-weight: 600; color: <?php echo $shipping == 0 ? '#059669' : '#333'; ?>;"><?php echo $shipping == 0 ? 'FREE' : '$' . number_format($shipping, 2); ?></span></div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 16px;"><span style="color: #888;">Tax (10%)</span><span style="font-weight: 600;">$<?php echo number_format($tax, 2); ?></span></div>
+                <div style="height: 1px; background: #eee; margin-bottom: 16px;"></div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 24px;"><span style="font-weight: 700; font-size: 1.1rem;">Total</span><span style="font-weight: 800; font-size: 1.3rem; color: #EE4D2D;">$<?php echo number_format($total, 2); ?></span></div>
+                <a href="<?php echo APPURL; ?>shopping/checkout.php" style="display: block; text-align: center; padding: 16px; background: #FF6B35; color: white; font-weight: 700; border-radius: 12px; text-decoration: none; transition: background 0.2s;" onmouseover="this.style.background='#EE4D2D'" onmouseout="this.style.background='#FF6B35'">Proceed to Checkout</a>
             </div>
         </div>
-
-        <!-- Order Summary -->
-        <div class="col-lg-4">
-            <div class="card shadow-sm border-0 sticky-top" style="top: 100px;">
-                <div class="card-header bg-white py-3">
-                    <h5 class="mb-0 fw-bold">Order Summary</h5>
-                </div>
-                <div class="card-body">
-                    <div class="d-flex justify-content-between mb-3">
-                        <span class="text-muted">Subtotal (3 items):</span>
-                        <span class="fw-bold">$56.96</span>
-                    </div>
-                    <div class="d-flex justify-content-between mb-3">
-                        <span class="text-muted">Shipping:</span>
-                        <span class="text-success fw-bold">FREE</span>
-                    </div>
-                    <div class="d-flex justify-content-between mb-3">
-                        <span class="text-muted">Tax:</span>
-                        <span class="fw-bold">$5.70</span>
-                    </div>
-                    <hr>
-                    <div class="d-flex justify-content-between mb-4">
-                        <span class="fw-bold fs-5">Total:</span>
-                        <span class="fw-bold fs-4 text-primary">$62.66</span>
-                    </div>
-
-                    <!-- Promo Code -->
-                    <div class="mb-4">
-                        <label class="form-label fw-bold small">Have a promo code?</label>
-                        <div class="input-group">
-                            <input type="text" class="form-control" placeholder="Enter code">
-                            <button class="btn btn-outline-secondary" type="button">Apply</button>
-                        </div>
-                    </div>
-
-                    <!-- Checkout Button -->
-                    <a href="<?php echo APPURL; ?>shopping/checkout.php" class="btn btn-primary btn-lg w-100 mb-3">
-                        <i class="fas fa-lock me-2"></i>Proceed to Checkout
-                    </a>
-
-                    <!-- Secure Badges -->
-                    <div class="text-center">
-                        <small class="text-muted d-block mb-2">
-                            <i class="fas fa-shield-alt me-1"></i>Secure Checkout
-                        </small>
-                        <div class="d-flex justify-content-center gap-2">
-                            <i class="fab fa-cc-visa fa-2x text-primary"></i>
-                            <i class="fab fa-cc-mastercard fa-2x text-warning"></i>
-                            <i class="fab fa-cc-paypal fa-2x text-info"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Trust Badges -->
-            <div class="card shadow-sm border-0 mt-4">
-                <div class="card-body text-center p-4">
-                    <i class="fas fa-shipping-fast fa-3x mb-3" style="background: var(--primary-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;"></i>
-                    <h6 class="fw-bold mb-2">Free Shipping</h6>
-                    <small class="text-muted">On orders over $50</small>
-                </div>
-            </div>
+        <?php else: ?>
+        <div style="text-align: center; padding: 80px 40px; background: #fff; border-radius: 16px; border: 1px solid #eee;">
+            <i data-lucide="shopping-cart" style="width:48px; height:48px; color: #ddd; margin-bottom: 16px;"></i>
+            <h3 style="font-size: 1.2rem; font-weight: 700; color: #555;">Your cart is empty</h3>
+            <p style="color: #999; margin-bottom: 24px;">Browse our products and add items to your cart.</p>
+            <a href="<?php echo APPURL; ?>" style="display: inline-block; padding: 12px 28px; background: #FF6B35; color: white; font-weight: 600; border-radius: 10px; text-decoration: none;">Start Shopping</a>
         </div>
-
+        <?php endif; ?>
     </div>
-
 </div>
 
 <?php require '../includes/footer.php'; ?>

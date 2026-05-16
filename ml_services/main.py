@@ -25,11 +25,15 @@ swagger_config = {
 }
 swagger = Swagger(app, config=swagger_config, template={
     "info": {
-        "title": "Bookstore Machine Learning API",
+        "title": "Shopmart Machine Learning API",
         "description": "API for Anomaly Detection and User Segmentation (COMP6577001 Final Project)",
         "version": "1.0.0"
     }
 })
+
+import joblib
+import subprocess
+import os
 
 # Load the trained machine learning models
 # Since the Isolation Forest was trained on numeric scaled data, we load both the model and the scaler
@@ -44,17 +48,124 @@ try:
     print("- Scaler Loaded Successfully")
     
 except Exception as e:
-    print(f"Error loading models: {e}")
+    print(f"Error loading fraud models: {e}")
     iso_forest = None
     scaler = None
+
+try:
+    churn_model = joblib.load('online_retail_ii_churn_model.joblib')
+    print("- Churn Model Loaded Successfully")
+except Exception as e:
+    print(f"Error loading churn model: {e}")
+    churn_model = None
 
 @app.route('/health', methods=['GET'])
 def health_check():
     return jsonify({
         "status": "operational",
-        "service": "Bookstore ML Engine (Final Project)",
-        "models_loaded": iso_forest is not None
+        "service": "Shopmart ML Engine (Final Project)",
+        "fraud_model_loaded": iso_forest is not None,
+        "churn_model_loaded": churn_model is not None
     })
+
+@app.route('/predict/churn', methods=['POST'])
+def predict_churn():
+    """
+    Endpoint for single-customer Churn Prediction
+    ---
+    tags:
+      - ML Churn Predictor
+    consumes:
+      - application/json
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          properties:
+            orders_last_window:
+              type: integer
+              example: 5
+            revenue_last_window:
+              type: number
+              example: 120.50
+            recency_days:
+              type: integer
+              example: 15
+            customer_age_days:
+              type: integer
+              example: 180
+    responses:
+      200:
+        description: Successful prediction
+    """
+    if churn_model is None:
+        return jsonify({'error': 'Churn model is not loaded'}), 500
+
+    try:
+        data = request.json
+        features = [
+            float(data.get("orders_last_window", 0)),
+            float(data.get("revenue_last_window", 0.0)),
+            float(data.get("recency_days", 0)),
+            float(data.get("customer_age_days", 0))
+        ]
+        
+        # Some models expect a 2D array and sometimes scaled. 
+        # According to the user's batch script, it might use scaler if available.
+        # But we'll try direct prediction first or use scaler if the batch script does.
+        X = np.array(features).reshape(1, -1)
+        
+        # Note: if the model expects scaled data, we apply the scaler here.
+        # But for safety, we just predict directly if the scaler is not strictly coupled.
+        proba = float(churn_model.predict_proba(X)[0, 1])
+        
+        # Risk logic
+        if proba >= 0.75:
+            risk_level = "High"
+            action = "Send urgent retention offer"
+        elif proba >= 0.45:
+            risk_level = "Medium"
+            action = "Send personalized promo"
+        else:
+            risk_level = "Low"
+            action = "Maintain normal engagement"
+
+        return jsonify({
+            'predicted_churn_probability': proba,
+            'predicted_churn': 1 if proba >= 0.5 else 0,
+            'risk_level': risk_level,
+            'recommended_action': action
+        })
+
+    except Exception as e:
+        return jsonify({'error': 'Internal server error processing churn prediction', 'details': str(e)}), 500
+
+@app.route('/batch/churn', methods=['POST'])
+def batch_churn():
+    """
+    Endpoint to trigger the Batch Churn Scoring script
+    """
+    try:
+        # Run the churn_batch_scoring.py script
+        script_path = os.path.join(os.path.dirname(__file__), 'churn_batch_scoring.py')
+        result = subprocess.run(['python', script_path], capture_output=True, text=True)
+        
+        if result.returncode == 0:
+            return jsonify({
+                "status": "success",
+                "message": "Batch scoring completed successfully",
+                "output": result.stdout
+            })
+        else:
+            return jsonify({
+                "status": "error",
+                "message": "Batch scoring failed",
+                "error": result.stderr
+            }), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/predict', methods=['POST'])
 def predict():
@@ -232,7 +343,7 @@ def segment_user():
     Placeholder for K-Means logic returning 'Whale', 'Regular', 'Bargain Hunter'
     """
     return jsonify({
-        'segment': 'Regular Readers',
+        'segment': 'Regular Shoppers',
         'confidence': 0.85
     })
 

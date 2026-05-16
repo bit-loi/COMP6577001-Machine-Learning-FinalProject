@@ -1,9 +1,9 @@
-# Apache Configuration for Bookstore
+# Apache Configuration for Shopmart
 
 # Enable Rewrite Engine
 <IfModule mod_rewrite.c>
     RewriteEngine On
-    RewriteBase /bookstore/
+    RewriteBase /shopmart/
     
     # Remove trailing slashes
     RewriteCond %{REQUEST_FILENAME} !-d
@@ -21,7 +21,7 @@
     Header set X-XSS-Protection "1; mode=block"
     Header set Referrer-Policy "strict-origin-when-cross-origin"
     Header set Permissions-Policy "geolocation=(), microphone=(), camera=()"
-    Header set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdn.jsdelivr.net https://fonts.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://covers.openlibrary.org https://images.unsplash.com https://via.placeholder.com; connect-src 'self' http://localhost:5000 http://127.0.0.1:5000 https://cdn.jsdelivr.net;"
+    Header set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://placehold.co https://images.unsplash.com; connect-src 'self' http://localhost:5000 http://127.0.0.1:5000 https://cdn.jsdelivr.net https://cdnjs.cloudflare.com;"
     Header always unset X-Powered-By
     Header set Server ""
 </IfModule>
@@ -30,8 +30,8 @@
 Options -Indexes
 
 # Error Pages
-ErrorDocument 404 /bookstore/404.php
-ErrorDocument 500 /bookstore/500.php
+ErrorDocument 404 /shopmart/error.php?type=404
+ErrorDocument 500 /shopmart/error.php?type=500
 
 # Protect Sensitive Files
 <FilesMatch "(\.env|\.env\..*|config\.php|\.git|composer\.lock|package-lock\.json|\.htpasswd|\.htaccess)$">

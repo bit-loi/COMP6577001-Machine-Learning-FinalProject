@@ -1,4 +1,4 @@
-# Simulation Anomaly Detector In Bookstore Website Transactions
+# Shopmart Marketplace: E-Commerce with Machine Learning Decision Support
 
 **FINAL PROJECT – MACHINE LEARNING**  
 **Group:** 5  
@@ -10,62 +10,56 @@
 ---
 
 ## 1. Problem Statement & Motivation
-In the rapidly growing e-commerce sector, transactional integrity and customer relationship management are paramount. Two significant challenges persist for online retailers: identifying fraudulent activities without disrupting the legitimate user experience, and effectively segmenting customers to optimize targeted marketing strategies. 
+In the rapidly growing e-commerce sector, customer retention and transactional integrity are paramount. Two significant challenges persist for online retailers: identifying customers who are likely to stop purchasing (customer churn) and detecting fraudulent or anomalous transactions. 
 
-This project addresses these challenges by simulating an integrated Machine Learning Dashboard within a Bookstore E-Commerce Platform. The motivation is to deploy an end-to-end, classical machine learning pipeline that automatically highlights anomalous transactions (fraud detection) and classifies users based on purchasing behavior (user segmentation), providing administrators with actionable, data-driven insights.
+This project addresses these challenges by simulating an integrated **Machine Learning Dashboard** within **Shopmart**, a fully functional E-Commerce Marketplace platform. The motivation is to deploy an end-to-end, classical machine learning pipeline that predicts customer churn (retention) and highlights anomalous transactions, providing administrators with actionable, data-driven decision support systems.
 
 ## 2. Dataset Description
-The machine learning models implemented in this project utilize the **IEEE-CIS Fraud Detection Database** to simulate the transaction and identity features of our e-commerce environment.
+The machine learning models implemented in this project utilize the **UCI Online Retail II Database** to simulate the transaction and identity features of our e-commerce environment.
 
-- **Source:** Kaggle - [IEEE-CIS Fraud Detection Dataset](https://www.kaggle.com/datasets/lnasiri007/ieeecis-fraud-detection)
-- **Characteristics:** The dataset contains a massive array of transaction features (anonymized variables such as V1-V339, transaction amounts, card details) and identity features (device type, network indicators).
-- **Justification:** This real-world industry dataset is highly relevant for testing classical anomaly detection models against complex, multi-dimensional transactional footprints.
+- **Source:** UCI Machine Learning Repository - [Online Retail II Dataset](https://archive.ics.uci.edu/dataset/502/online+retail+ii)
+- **Characteristics:** The dataset contains all the transactions occurring for a UK-based and registered non-store online retail between 01/12/2009 and 09/12/2011.
+- **Justification:** This real-world industry dataset provides excellent longitudinal data to calculate Recency, Frequency, and Monetary (RFM) features essential for predicting customer churn in a retail setting.
 
-## 3. Exploratory Data Analysis (EDA)
-*(Note: Full EDA details and graphical representations are documented in the accompanying presentation slides).*
-- **Class Imbalance:** Fraudulent transactions represent a very minor fraction of the dataset, necessitating anomaly detection over standard classification.
-- **Feature Correlation:** Certain subsets of anonymized ('V') features display high correlation, requiring dimensionality reduction or tree-based algorithms capable of isolating significant splits.
-- **Distribution Check:** Transaction amounts are heavily right-skewed; a log transformation and scaling (using StandardScaler) were essential before model training.
+## 3. Machine Learning Problem Formulation
+The project tackles two primary constraints:
+1. **Customer Retention (Churn Prediction):** Formulated as a supervised binary classification problem. The model predicts whether a customer will churn (stop buying) based on their historical purchase behavior (Orders, Revenue, Recency, Age).
+2. **Anomaly Detection (Fraud):** Formulated as an unsupervised outlier detection problem, where the vast majority of points are normal purchases, and anomalies lie in sparse regions.
 
-## 4. Machine Learning Problem Formulation
-The project tackles two primary unsupervised constraints:
-1. **Anomaly Detection (Fraud):** Formulated as an unsupervised outlier detection problem, where the vast majority of points are background (normal purchases), and anomalies lie in sparse regions.
-2. **User Segmentation:** Formulated as a clustering problem to identify natural groupings among user transaction histories without pre-existing labels.
-
-## 5. Model Selection & Rationale
+## 4. Model Selection & Rationale
 *Constraint Adherence: No Deep Learning techniques are used. Only Classical Machine Learning approaches are applied.*
 
-1. **Anomaly Detection: Isolation Forest**
+1. **Churn Prediction: Random Forest Classifier**
+   - **Method:** `sklearn.ensemble.RandomForestClassifier`
+   - **Rationale:** Random Forest is robust to outliers, handles non-linear relationships well, and provides feature importance metrics, which is crucial for understanding why a customer might churn. It performs exceptionally well on tabular RFM data.
+
+2. **Anomaly Detection: Isolation Forest**
    - **Method:** `sklearn.ensemble.IsolationForest`
-   - **Rationale:** Isolation Forest is highly effective for high-dimensional datasets with heavy class imbalances. It explicitly isolates anomalies rather than profiling normal data points, making it significantly faster and more accurate for processing the IEEE-CIS dataset compared to density-based methods like DBSCAN.
+   - **Rationale:** Isolation Forest is highly effective for high-dimensional datasets with heavy class imbalances. It explicitly isolates anomalies rather than profiling normal data points, making it significantly faster and more accurate.
 
-2. **User Segmentation: K-Means Clustering**
-   - **Method:** `sklearn.cluster.KMeans`
-   - **Rationale:** As a distance-based classical clustering algorithm, K-Means is scalable and highly interpretable. By passing aggregated user metrics (e.g., total spend, transaction count), we can quickly partition users into distinct, actionable segments (e.g., High-Value Whales, Bargain Hunters, Occasional Readers).
+## 5. Deployment Architecture (Decision Support System)
+The machine learning solution is fully deployed as a usable web application conforming to project requirements. The system utilizes a **Batch Scoring Architecture** rather than real-time prediction, which perfectly mirrors real-world enterprise reporting.
 
-## 6. Deployment Architecture
-The machine learning solution is fully deployed as a usable web application conforming to project requirements.
+- **Machine Learning Pipeline (Python):** A batch scoring script (`ml_services/churn_batch_scoring.py`) loads the pre-trained `.joblib` models, processes the latest customer features, and generates a CSV containing churn probabilities.
+- **Backend / Admin Interface (PHP/MySQL):** Administrators upload the generated CSV via the `import_churn.php` interface. The PHP backend processes the probabilities, calculates risk levels, assigns recommended retention actions, and stores them in the database.
+- **Interactive Dashboard:** A highly interactive admin console simulated using **Tailwind CSS**. It renders risk distribution charts, customer tables, and provides an actionable **Feedback Loop** (e.g., "Send Voucher", "Contacted") where admin actions are logged back into the database (`retention_actions`).
+- **E-Commerce Core:** The underlying website operates on **PHP 7.4+** and **MySQL**, featuring a wallet balance system and a user-seller marketplace.
 
-- **Machine Learning API (Backend):** Developed in **Python** using the **Flask** framework. It serves the pre-trained `isolation_forest.pkl` and `scaler.pkl` models via RESTful endpoints.
-- **Frontend / Client Interface:** A highly interactive admin console simulated using **React** and **Tailwind CSS**. It fetches data from the Flask API and renders real-time anomaly feeds and clustering distribution.
-- **E-Commerce Core:** The underlying website operates on **PHP 7.4+** and **MySQL**, bridging standard database state constraints with advanced machine learning diagnostics.
-
-## 7. Real User Testing Design
+## 6. Real User Testing Design
 To fulfill the evaluation requirement, the deployed dashboard is subjected to physical user testing with a minimum of 5 external participants.
-- **Usage Scenario:** Participants act as Bookstore Administrators tasked with monitoring live transactions and reviewing new customer segments. They will utilize the dashboard to flag a specific fraudulent scenario.
+- **Usage Scenario:** Participants act as Shopmart Administrators tasked with monitoring customer churn risk. They will utilize the dashboard to identify High-Risk customers and execute a retention action (e.g., sending a discount voucher).
 - **Feedback Collection:** Metrics evaluated include Usability, Intuitiveness of the Result Interpretations, and System Stability. Data is collected via Likert scales and open-ended qualitative prompts.
 - **Publication:** The detailed findings, respondent demographics, and user feedback analysis will be strictly presented in the Final PPT Report.
 
 ---
 
-## 8. Manual Installation & Execution
+## 7. Manual Installation & Execution
 
 ### A. Environment Prerequisites
 - Python 3.8+
 - PHP 7.4+ and MySQL (XAMPP recommended)
-- Node.js (for Vite/React compilation)
 
-### B. Machine Learning API Setup
+### B. Machine Learning Batch Scoring Setup
 1. Navigate to the Machine Learning directory:
    ```bash
    cd ml_services
@@ -77,22 +71,20 @@ To fulfill the evaluation requirement, the deployed dashboard is subjected to ph
    ```
 3. Install required Data Science libraries:
    ```bash
-   pip install -r requirements.txt
+   pip install pandas numpy scikit-learn joblib
    ```
-4. Start the Flask server:
+4. Run the batch scoring script to generate the CSV:
    ```bash
-   python main.py
+   python churn_batch_scoring.py
    ```
 
 ### C. Web Application Setup
-1. Clone the repository into your local web server root (e.g., `C:\xampp\htdocs\bookstore`).
-2. Start the Apache and MySQL services. Ensure the database matches `config/config.php`.
-3. Install frontend dependencies and start the development server for the simulation dashboard:
-   ```bash
-   npm install
-   npm run dev
-   ```
-4. Access the Administration Simulation Interface at: `http://localhost/bookstore/simulation.php`
+1. Clone the repository into your local web server root (e.g., `C:\xampp\htdocs\shopmart`).
+2. Start the Apache and MySQL services in XAMPP.
+3. Import the database schema `database/shopmart.sql` into phpMyAdmin.
+4. Access the Storefront at: `http://localhost/shopmart/`
+5. Access the Administration Dashboard at: `http://localhost/shopmart/admin/`
+6. Access the Churn Prediction Dashboard at: `http://localhost/shopmart/admin/churn/`
 
 ---
 *Disclaimer: This project repository utilizes continuous integration via Git. All theoretical formulations and dataset preprocessing scripts are maintained strictly within the project policies established by BINUS University.*

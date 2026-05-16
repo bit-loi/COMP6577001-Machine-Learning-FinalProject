@@ -1,0 +1,11 @@
+customer_id,country,orders_last_window,revenue_last_window,recency_days,customer_age_days
+17850,United Kingdom,12,340.20,88,420
+13047,United Kingdom,5,120.50,45,300
+12583,France,20,800.00,12,500
+15100,Germany,3,55.75,120,210
+17511,United Kingdom,8,210.30,60,380
+13748,Australia,15,650.00,20,480
+14680,Netherlands,2,38.50,150,180
+16029,United Kingdom,6,175.80,55,350
+15838,Spain,11,290.00,30,410
+17404,Germany,4,90.20,105,240

@@ -1,387 +1,252 @@
-<?php require 'includes/header.php'; ?>
-<?php require 'config/config.php'; ?>
-<?php require 'includes/book-cover.php'; ?>
+<?php require_once 'includes/header.php'; ?>
+<?php require_once 'config/config.php'; ?>
+<?php require_once 'includes/product-image.php'; ?>
 
 <?php
-    $stmt = $conn->prepare("SELECT * FROM products WHERE status = 1 ORDER BY created_at DESC LIMIT 8"); 
+    // Fetch featured products
+    $stmt = $conn->prepare("SELECT * FROM products WHERE featured = 1 AND status = 1 LIMIT 10");
+    $stmt->execute();
+    $featuredProducts = $stmt->fetchAll(PDO::FETCH_OBJ);
+
+    // Fetch all active products
+    $stmt = $conn->prepare("SELECT * FROM products WHERE status = 1 ORDER BY created_at DESC LIMIT 15");
     $stmt->execute();
     $allProducts = $stmt->fetchAll(PDO::FETCH_OBJ);
+
+    // Fetch categories
+    $stmt = $conn->prepare("SELECT c.*, COUNT(p.id) as product_count FROM categories c LEFT JOIN products p ON c.id = p.category_id AND p.status = 1 GROUP BY c.id ORDER BY c.name ASC LIMIT 12");
+    $stmt->execute();
+    $categories = $stmt->fetchAll(PDO::FETCH_OBJ);
+
+    // Category icons
+    $categoryIcons = ['electronics' => 'smartphone', 'fashion' => 'shirt', 'home-living' => 'sofa', 'beauty' => 'sparkles', 'sports' => 'dumbbell', 'books-stationery' => 'book-open', 'groceries' => 'apple', 'toys-games' => 'gamepad-2'];
 ?>
 
 <style>
-    .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.05); }
-    .gradient-text { background: linear-gradient(to right, #fff, #666); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+/* Marketplace specific styles */
+body { background: #f5f5f5; }
+.marketplace-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+@media (min-width: 640px) { .marketplace-grid { grid-template-columns: repeat(3, 1fr); gap: 12px; } }
+@media (min-width: 1024px) { .marketplace-grid { grid-template-columns: repeat(5, 1fr); gap: 16px; } }
 
-    /* ===== HERO STYLES ===== */
-    #hero-section {
-        position: relative;
-        min-height: 100vh;
-        width: 100%;
-        background: #000;
-        overflow: hidden;
-    }
-    #us-bg {
-        position: absolute;
-        inset: 0;
-        width: 100%;
-        height: 100%;
-    }
-    #us-bg [data-us-project] {
-        width: 100%;
-        height: 100%;
-        min-height: 100vh;
-        position: relative;
-        overflow: hidden;
-    }
-    #us-bg [data-us-project] canvas {
-        clip-path: inset(0 0 8% 0);
-    }
-    /* hide branding */
-    [data-us-project] a[href*="unicorn"],
-    [data-us-project] button[title*="unicorn"],
-    [data-us-project] div[title*="Made with"],
-    [data-us-project] .unicorn-brand,
-    [data-us-project] [class*="brand"],
-    [data-us-project] [class*="credit"],
-    [data-us-project] [class*="watermark"] {
-        display: none !important;
-        visibility: hidden !important;
-        opacity: 0 !important;
-        position: absolute !important;
-        left: -9999px !important;
-    }
-    /* Mobile stars fallback */
-    .stars-bg {
-        background-image:
-            radial-gradient(1px 1px at 20% 30%, white, transparent),
-            radial-gradient(1px 1px at 60% 70%, white, transparent),
-            radial-gradient(1px 1px at 50% 50%, white, transparent),
-            radial-gradient(1px 1px at 80% 10%, white, transparent),
-            radial-gradient(1px 1px at 90% 60%, white, transparent),
-            radial-gradient(1px 1px at 33% 80%, white, transparent),
-            radial-gradient(1px 1px at 15% 60%, white, transparent),
-            radial-gradient(1px 1px at 70% 40%, white, transparent);
-        background-size: 200% 200%, 180% 180%, 250% 250%, 220% 220%, 190% 190%, 240% 240%, 210% 210%, 230% 230%;
-        opacity: 0.25;
-    }
-    /* Dither pattern */
-    .dither-bar {
-        background-image:
-            repeating-linear-gradient(0deg, transparent 0px, transparent 1px, white 1px, white 2px),
-            repeating-linear-gradient(90deg, transparent 0px, transparent 1px, white 1px, white 2px);
-        background-size: 3px 3px;
-    }
-    /* Corner accents */
-    .corner { position: absolute; width: 48px; height: 48px; z-index: 20; }
-    .corner-tl { top: 0; left: 0; border-top: 2px solid rgba(255,255,255,0.25); border-left: 2px solid rgba(255,255,255,0.25); }
-    .corner-tr { top: 0; right: 0; border-top: 2px solid rgba(255,255,255,0.25); border-right: 2px solid rgba(255,255,255,0.25); }
-    .corner-bl { bottom: 5vh; left: 0; border-bottom: 2px solid rgba(255,255,255,0.25); border-left: 2px solid rgba(255,255,255,0.25); }
-    .corner-br { bottom: 5vh; right: 0; border-bottom: 2px solid rgba(255,255,255,0.25); border-right: 2px solid rgba(255,255,255,0.25); }
-    /* Hero content */
-    #hero-content {
-        position: relative;
-        z-index: 10;
-        display: flex;
-        align-items: center;
-        min-height: 100vh;
-        padding-top: 5vh;
-    }
-    /* Animations */
-    @keyframes fadeInUp {
-        from { opacity: 0; transform: translateY(24px); }
-        to   { opacity: 1; transform: translateY(0); }
-    }
-    @keyframes fadeIn {
-        from { opacity: 0; }
-        to   { opacity: 1; }
-    }
-    @keyframes scanline {
-        0%   { transform: translateY(-100%); }
-        100% { transform: translateY(100vh); }
-    }
-    @keyframes blink {
-        0%, 100% { opacity: 1; } 50% { opacity: 0; }
-    }
-    @keyframes barPulse {
-        0%, 100% { transform: scaleY(1); opacity: 0.3; }
-        50%       { transform: scaleY(1.8); opacity: 0.7; }
-    }
-    .hero-line-1 { animation: fadeInUp 0.8s ease 0.2s both; }
-    .hero-line-2 { animation: fadeInUp 0.8s ease 0.4s both; }
-    .hero-line-3 { animation: fadeInUp 0.8s ease 0.6s both; }
-    .hero-line-4 { animation: fadeInUp 0.8s ease 0.8s both; }
-    .hero-line-5 { animation: fadeInUp 0.8s ease 1.0s both; }
-    .hero-line-6 { animation: fadeInUp 0.8s ease 1.2s both; }
-    .scanline {
-        position: absolute;
-        left: 0; right: 0;
-        height: 2px;
-        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.03), transparent);
-        animation: scanline 6s linear infinite;
-        z-index: 5;
-        pointer-events: none;
-    }
-    .hero-btn {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        padding: 10px 24px;
-        font-family: 'JetBrains Mono', 'Courier New', monospace;
-        font-size: 11px;
-        font-weight: 700;
-        letter-spacing: 0.15em;
-        text-transform: uppercase;
-        text-decoration: none;
-        border: 1px solid white;
-        color: white;
-        background: transparent;
-        cursor: pointer;
-        transition: background 0.2s, color 0.2s;
-        position: relative;
-    }
-    .hero-btn:hover { background: white; color: #000; }
-    .hero-btn-secondary {
-        border-color: rgba(255,255,255,0.35);
-        color: rgba(255,255,255,0.7);
-    }
-    .hero-btn-secondary:hover { background: white; color: #000; border-color: white; }
-    /* Corner hover accents on primary btn */
-    .hero-btn .btn-corner-tl,
-    .hero-btn .btn-corner-br {
-        position: absolute;
-        width: 8px; height: 8px;
-        opacity: 0;
-        transition: opacity 0.2s;
-    }
-    .hero-btn .btn-corner-tl { top: -2px; left: -2px; border-top: 1px solid white; border-left: 1px solid white; }
-    .hero-btn .btn-corner-br { bottom: -2px; right: -2px; border-bottom: 1px solid white; border-right: 1px solid white; }
-    .hero-btn:hover .btn-corner-tl,
-    .hero-btn:hover .btn-corner-br { opacity: 1; }
-    .mono-xs { font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 9px; color: rgba(255,255,255,0.35); letter-spacing: 0.1em; }
-    @media (max-width: 768px) {
-        #us-bg { display: none; }
-        .corner { width: 28px; height: 28px; }
-        #hero-statusbar { padding: 8px 16px; }
-    }
+.product-card {
+    height: 100%;
+    min-height: 320px;
+    display: flex;
+    flex-direction: column;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    overflow: hidden;
+    text-decoration: none;
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+@media (min-width: 768px) {
+    .product-card { min-height: 430px; }
+}
+
+.product-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+}
+
+.product-img-wrap { position: relative; aspect-ratio: 1; background: #fff; display: flex; align-items: center; justify-content: center; padding: 12px; border-bottom: 1px solid #f8fafc; }
+.product-img-wrap img { width: 100%; height: 100%; object-fit: contain; mix-blend-mode: multiply; transition: transform 0.3s ease; }
+.product-card:hover .product-img-wrap img { transform: scale(1.05); }
+
+.discount-badge { position: absolute; top: 0; right: 0; background: #EE4D2D; color: white; font-size: 0.65rem; font-weight: 700; padding: 4px 8px; border-bottom-left-radius: 8px; z-index: 2; }
+.product-info { padding: 10px; display: flex; flex-direction: column; flex-grow: 1; }
+@media (min-width: 768px) { .product-info { padding: 12px 18px 18px 18px; } }
+
+.product-title { font-size: 0.8rem; color: #334155; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 6px; min-height: 36px; font-weight: 500; }
+@media (min-width: 768px) { .product-title { font-size: 0.95rem; margin-bottom: 8px; min-height: 42px; } }
+
+.product-price { font-size: 1rem; font-weight: 800; color: #EE4D2D; }
+@media (min-width: 768px) { .product-price { font-size: 1.15rem; } }
+
+.product-price-orig { font-size: 0.7rem; color: #94a3b8; text-decoration: line-through; margin-left: 4px; }
+.product-meta { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; font-size: 0.65rem; color: #64748b; }
+@media (min-width: 768px) { .product-meta { font-size: 0.75rem; margin-top: 12px; } }
+.cat-card { background: #fff; border: 1px solid #f1f5f9; transition: all 0.2s; border-radius: 8px; margin: 4px; }
+.cat-card:hover { border-color: #cbd5e1; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); transform: translateY(-2px); }
 </style>
 
-<!-- ===== HERO SECTION ===== -->
-<section id="hero-section">
+<!-- ===== HERO ===== -->
+<section style="background:#fff;border-bottom:1px solid #f0f0f0;">
+  <div style="max-width:1280px;margin:0 auto;padding:20px 16px;">
+    <div style="display:flex;flex-direction:column;gap:12px;">
 
-    <!-- UnicornStudio BG (Always display) -->
-    <div id="us-bg">
-        <div data-us-project="whwOGlfJ5Rz2rHaEUgHl"></div>
-    </div>
-
-    <!-- Pure CSS Stars Fallback (Always display behind WebGL) -->
-    <div class="stars-bg" style="position: absolute; top:0; left:0; width:100%; height:100%; z-index:0;"></div>
-
-    <!-- Scanline effect -->
-    <div class="scanline"></div>
-
-    <!-- Corner accents -->
-    <div class="corner corner-tl"></div>
-    <div class="corner corner-tr"></div>
-    <div class="corner corner-bl"></div>
-    <div class="corner corner-br"></div>
-
-    <!-- Main content -->
-    <div id="hero-content">
-        <div style="padding: 0 32px 0 48px; max-width: 1280px; margin: 0 auto; width: 100%;">
-            <div style="max-width: 520px; margin-left: clamp(0px, 8vw, 120px);">
-
-                <!-- Eyebrow line -->
-                <div class="hero-line-1" style="display:flex; align-items:center; gap:12px; margin-bottom:20px; opacity:0.5;">
-                    <div style="width:32px; height:1px; background:white;"></div>
-                    <span style="font-family:'JetBrains Mono','Courier New',monospace; font-size:10px; letter-spacing:0.25em; color:white; text-transform:uppercase;">001 · Premeditatio Malorum</span>
-                    <div style="flex:1; height:1px; background:white;"></div>
-                </div>
-
-                <!-- Dither accent -->
-                <div class="hero-line-2" style="position:relative;">
-                    <div class="dither-bar hidden lg:block" style="position:absolute; left:-12px; top:0; bottom:0; width:4px; opacity:0.35; border-radius:2px;"></div>
-
-                    <!-- Title -->
-                    <h1 class="hero-line-2" style="font-family:'JetBrains Mono','Courier New',monospace; font-size:clamp(2rem,5vw,3.75rem); font-weight:700; color:white; line-height:1.05; letter-spacing:0.08em; margin:0 0 8px 0;">
-                        MEMENTO
-                    </h1>
-                    <h1 class="hero-line-3" style="font-family:'JetBrains Mono','Courier New',monospace; font-size:clamp(2rem,5vw,3.75rem); font-weight:700; color:rgba(255,255,255,0.65); line-height:1.05; letter-spacing:0.08em; margin:0 0 24px 0;">
-                        MORI.
-                    </h1>
-                </div>
-
-                <!-- Dot row -->
-                <div class="hero-line-3 hidden lg:flex" style="gap:4px; margin-bottom:20px; opacity:0.2;" id="dot-row"></div>
-
-                <!-- Description -->
-                <p class="hero-line-4" style="font-family:'JetBrains Mono','Courier New',monospace; font-size:0.8rem; color:rgba(255,255,255,0.55); line-height:1.9; margin:0 0 32px 0; max-width:400px;">
-                    Curated literature for those who contemplate the inevitable.<br>
-                    Books that challenge, endure, and illuminate the human condition.
-                </p>
-
-                <!-- CTA Buttons -->
-                <div class="hero-line-5" style="display:flex; flex-wrap:wrap; gap:12px; margin-bottom:32px;">
-                    <a href="<?php echo APPURL; ?>categories/index.php" class="hero-btn">
-                        <span class="btn-corner-tl"></span>
-                        <span class="btn-corner-br"></span>
-                        EXPLORE COLLECTION
-                    </a>
-                    <a href="<?php echo APPURL; ?>auth/register.php" class="hero-btn hero-btn-secondary">
-                        JOIN THE CIRCLE
-                    </a>
-                </div>
-
-                <!-- Bottom notation -->
-                <div class="hero-line-6 hidden lg:flex" style="align-items:center; gap:12px; opacity:0.25;">
-                    <span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:white;">∞</span>
-                    <div style="flex:1; height:1px; background:white;"></div>
-                    <span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:white; letter-spacing:0.15em;">VITRUVIAN · EST. MMXXV</span>
-                </div>
-
-            </div>
+      <!-- Main hero banner -->
+      <div style="position:relative;border-radius:16px;overflow:hidden;background:linear-gradient(135deg,#FFF1EC 0%,#FFE4D5 40%,#FECBA6 100%);padding:32px 24px 32px 32px;display:flex;align-items:center;justify-content:space-between;min-height:180px;">
+        <div style="position:absolute;right:-20px;bottom:-20px;opacity:0.06;">
+          <svg width="260" height="260" viewBox="0 0 24 24" fill="#EE4D2D"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
         </div>
-    </div>
-
-    <!-- Status bar -->
-    <div id="hero-statusbar">
-        <div style="display:flex; align-items:center; gap:24px;">
-            <span class="mono-xs">SYSTEM.ACTIVE</span>
-            <div style="display:flex; gap:3px; align-items:flex-end; height:16px;" id="bar-viz"></div>
-            <span class="mono-xs">V1.0.0</span>
+        <div style="position:relative;z-index:1;">
+          <div style="display:inline-flex;align-items:center;gap:5px;background:#EE4D2D;color:#fff;font-size:0.68rem;font-weight:700;padding:4px 12px;border-radius:20px;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:12px;"><i data-lucide="flame" style="width:12px;height:12px;stroke-width:3;"></i> Super Deals</div>
+          <h1 style="font-size:1.75rem;font-weight:900;color:#1a1a1a;line-height:1.2;margin:0 0 10px 0;">Discover Amazing<br><span style="color:#EE4D2D;">Deals</span> Every Day</h1>
+          <p style="color:#666;font-size:0.85rem;margin:0 0 18px 0;max-width:360px;line-height:1.5;">Thousands of products from trusted sellers. Fast delivery & great prices.</p>
+          <a href="<?php echo APPURL; ?>categories/index.php" style="display:inline-flex;align-items:center;gap:6px;background:#EE4D2D;color:#fff;font-size:0.85rem;font-weight:700;padding:10px 22px;border-radius:8px;text-decoration:none;transition:background .2s;" onmouseover="this.style.background='#C53D20'" onmouseout="this.style.background='#EE4D2D'">
+            Shop Now <i data-lucide="arrow-right" style="width:14px;height:14px;stroke-width:3;"></i>
+          </a>
         </div>
-        <div style="display:flex; align-items:center; gap:8px;">
-            <span class="mono-xs hidden lg:inline">◐ RENDERING</span>
-            <div style="display:flex; gap:4px; align-items:center;">
-                <div class="pulse-dot"></div>
-                <div class="pulse-dot"></div>
-                <div class="pulse-dot"></div>
-            </div>
-            <span class="mono-xs hidden lg:inline">FRAME: ∞</span>
-        </div>
-    </div>
+      </div>
 
+      <!-- Mini promo cards -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div style="background:linear-gradient(135deg,#FEF3C7,#FDE68A);border-radius:12px;padding:16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:transform .15s,box-shadow .15s;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 16px rgba(0,0,0,0.1)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+          <div style="width:40px;height:40px;background:#FFFBEB;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <i data-lucide="zap" style="width:22px;height:22px;color:#D97706;"></i>
+          </div>
+          <div>
+            <div style="font-size:0.88rem;font-weight:700;color:#92400E;">Flash Sale</div>
+            <div style="font-size:0.72rem;color:#B45309;">Up to 70% off</div>
+          </div>
+        </div>
+        <div style="background:linear-gradient(135deg,#D1FAE5,#A7F3D0);border-radius:12px;padding:16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:transform .15s,box-shadow .15s;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 16px rgba(0,0,0,0.1)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+          <div style="width:40px;height:40px;background:#ECFDF5;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <i data-lucide="truck" style="width:22px;height:22px;color:#059669;"></i>
+          </div>
+          <div>
+            <div style="font-size:0.88rem;font-weight:700;color:#065F46;">Free Shipping</div>
+            <div style="font-size:0.72rem;color:#047857;">Orders over $50</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </section>
-<!-- ===== END HERO ===== -->
 
-<script>
-// ── UnicornStudio embed ──────────────────────────────────────────
-!function(){
-  if(!window.UnicornStudio){
-    window.UnicornStudio={isInitialized:!1};
-    var i=document.createElement('script');
-    i.src='https://cdn.jsdelivr.net/gh/hiunicornstudio/unicornstudio.js@v1.4.33/dist/unicornStudio.umd.js';
-    i.onload=function(){
-      window.UnicornStudio.isInitialized||(UnicornStudio.init(),window.UnicornStudio.isInitialized=!0);
-    };
-    (document.head||document.body).appendChild(i);
-  }
-}();
-
-// ── Hide branding periodically ───────────────────────────────────
-function hideBranding(){
-  var el=document.querySelector('[data-us-project]');
-  if(el){
-    el.querySelectorAll('*').forEach(function(n){
-      var t=(n.textContent||'').toLowerCase();
-      if(t.includes('made with')||t.includes('unicorn'))n.remove();
-    });
-  }
-}
-hideBranding();
-var _hbInterval=setInterval(hideBranding,150);
-setTimeout(function(){ clearInterval(_hbInterval); },8000);
-[500,1500,3000,5000].forEach(function(d){ setTimeout(hideBranding,d); });
-
-// ── Generate dot row ─────────────────────────────────────────────
-var dotRow=document.getElementById('dot-row');
-if(dotRow){
-  for(var d=0;d<48;d++){
-    var dot=document.createElement('div');
-    dot.style.cssText='width:3px;height:3px;background:white;border-radius:50%;flex-shrink:0;';
-    dotRow.appendChild(dot);
-  }
-}
-
-// ── Generate bar visualizer ──────────────────────────────────────
-var barViz=document.getElementById('bar-viz');
-if(barViz){
-  for(var b=0;b<10;b++){
-    var bar=document.createElement('div');
-    var h=Math.floor(Math.random()*10)+4;
-    bar.style.cssText='width:3px;background:rgba(255,255,255,0.3);border-radius:1px;height:'+h+'px;animation:barPulse '+(0.8+Math.random()*0.8).toFixed(2)+'s ease-in-out '+(Math.random()*0.5).toFixed(2)+'s infinite;';
-    barViz.appendChild(bar);
-  }
-}
-</script>
-
-<!-- ===== Bento Feature Section (React) ===== -->
-<div id="react-collection-feature"></div>
-
-<!-- ===== New Arrivals Product Grid ===== -->
-<section class="max-w-7xl mx-auto px-6 pb-32 space-y-12" id="products">
-    <div class="flex flex-col md:flex-row justify-between items-end gap-6">
-        <div class="space-y-2">
-            <div class="flex items-center gap-3">
-                <div style="width:24px;height:1px;background:rgba(255,255,255,0.2);"></div>
-                <span style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.25em;color:rgba(255,255,255,0.2);text-transform:uppercase;">New Arrivals</span>
-            </div>
-            <h2 class="text-3xl md:text-4xl font-serif text-white">Latest <span class="gradient-text italic">Additions</span></h2>
+<!-- ===== CATEGORIES ===== -->
+<?php
+$catIcons = [
+  'electronics'      => ['icon'=>'smartphone', 'bg'=>'#EFF6FF','color'=>'#1D4ED8'],
+  'fashion'          => ['icon'=>'shirt',      'bg'=>'#FDF2F8','color'=>'#9D174D'],
+  'home-living'      => ['icon'=>'sofa',       'bg'=>'#F0FDF4','color'=>'#166534'],
+  'beauty'           => ['icon'=>'sparkles',   'bg'=>'#FFF1F2','color'=>'#BE123C'],
+  'sports'           => ['icon'=>'dumbbell',   'bg'=>'#FFF7ED','color'=>'#C2410C'],
+  'books-stationery' => ['icon'=>'book-open',  'bg'=>'#FEFCE8','color'=>'#92400E'],
+  'groceries'        => ['icon'=>'apple',      'bg'=>'#F0FDF4','color'=>'#15803D'],
+  'toys-games'       => ['icon'=>'gamepad-2',  'bg'=>'#F5F3FF','color'=>'#6D28D9'],
+];
+?>
+<?php if($categories): ?>
+<section style="max-width:1280px;margin:16px auto 0;padding:0 16px;">
+  <div style="background:#fff;border-radius:12px;border:1px solid #f0f0f0;padding:16px 20px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+      <h2 style="font-size:0.95rem;font-weight:800;color:#111;text-transform:uppercase;letter-spacing:0.06em;margin:0;">Shop by Category</h2>
+      <a href="<?php echo APPURL; ?>categories/index.php" style="font-size:0.82rem;font-weight:600;color:#EE4D2D;text-decoration:none;">See All &rarr;</a>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
+      <?php foreach($categories as $cat):
+        $catStyle = $catIcons[$cat->slug] ?? ['icon'=>'package', 'bg'=>'#F5F5F5', 'color'=>'#555'];
+      ?>
+      <a href="<?php echo APPURL; ?>categories/index.php?id=<?php echo $cat->id; ?>" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px 8px 12px;border-radius:10px;background:<?php echo $catStyle['bg']; ?>;text-decoration:none;transition:transform .15s,box-shadow .15s;" onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 6px 20px rgba(0,0,0,0.08)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+        <div style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;">
+          <i data-lucide="<?php echo $catStyle['icon'] ?? 'package'; ?>" style="width:26px;height:26px;color:<?php echo $catStyle['color']; ?>;stroke-width:2;"></i>
         </div>
-        <a href="<?php echo APPURL; ?>categories/index.php" class="text-xs uppercase tracking-widest text-white/50 hover:text-white transition-colors flex items-center gap-2">
-            Explore All <i data-lucide="arrow-right" class="w-3 h-3"></i>
+        <div style="font-size:0.72rem;font-weight:600;color:<?php echo $catStyle['color']; ?>;text-align:center;line-height:1.3;"><?php echo htmlspecialchars($cat->name); ?></div>
+        <div style="font-size:0.62rem;color:#aaa;margin-top:2px;"><?php echo $cat->product_count; ?> items</div>
+      </a>
+      <?php endforeach; ?>
+    </div>
+  </div>
+</section>
+<?php endif; ?>
+
+<!-- ===== FEATURED PRODUCTS ===== -->
+<?php if($featuredProducts): ?>
+<section class="mt-8 max-w-7xl mx-auto px-4 lg:px-12">
+  <div class="flex items-center justify-between mb-4 px-2">
+    <h2 class="text-lg font-bold text-shopmart-600 uppercase tracking-wide flex items-center gap-2">
+      <i data-lucide="flame" style="width:20px;height:20px;"></i> Featured Deals
+    </h2>
+  </div>
+  <div class="marketplace-grid">
+    <?php foreach($featuredProducts as $product):
+      $hasDiscount = !empty($product->discount_price) && $product->discount_price > 0;
+      $displayPrice = $hasDiscount ? $product->discount_price : $product->price;
+      $savePct = $hasDiscount ? round((($product->price - $displayPrice) / $product->price) * 100) : 0;
+    ?>
+      <a href="<?php echo APPURL; ?>shopping/single.php?id=<?php echo $product->id; ?>" class="product-card">
+        <div class="product-img-wrap">
+          <?php echo getProductImage($product, '400x400'); ?>
+          <?php if($hasDiscount): ?>
+            <span class="discount-badge">-<?php echo $savePct; ?>%</span>
+          <?php endif; ?>
+        </div>
+        <div class="product-info">
+          <div class="product-title"><?php echo htmlspecialchars($product->name); ?></div>
+          <div>
+            <span class="product-price">$<?php echo number_format($displayPrice, 2); ?></span>
+            <?php if($hasDiscount): ?>
+              <span class="product-price-orig">$<?php echo number_format($product->price, 2); ?></span>
+            <?php endif; ?>
+          </div>
+          <div class="product-meta mt-3 pt-3 border-t border-gray-100">
+            <div class="flex items-center text-yellow-400">
+              ★<span class="text-gray-600 ml-1 text-[10px] font-bold"><?php echo number_format(rand(45, 50) / 10, 1); ?></span>
+            </div>
+            <span class="text-[10px] text-gray-400 font-medium"><?php echo rand(50, 500); ?> sold</span>
+          </div>
+        </div>
+      </a>
+    <?php endforeach; ?>
+  </div>
+</section>
+<?php endif; ?>
+
+<!-- ===== ALL PRODUCTS ===== -->
+<section class="mt-8 mb-16 max-w-7xl mx-auto px-4 lg:px-12">
+  <div class="bg-white p-4 sm:p-6 rounded-lg shadow-sm border border-gray-100">
+    <div class="flex items-center justify-between mb-6 pb-4 border-b border-gray-100">
+      <h2 class="text-lg font-bold text-gray-800 uppercase tracking-wide">Daily Discoveries</h2>
+    </div>
+    
+    <?php if($allProducts): ?>
+    <div class="marketplace-grid">
+      <?php foreach($allProducts as $product):
+        $hasDiscount = !empty($product->discount_price) && $product->discount_price > 0;
+        $displayPrice = $hasDiscount ? $product->discount_price : $product->price;
+        $savePct = $hasDiscount ? round((($product->price - $displayPrice) / $product->price) * 100) : 0;
+      ?>
+        <a href="<?php echo APPURL; ?>shopping/single.php?id=<?php echo $product->id; ?>" class="product-card !border-gray-100 hover:!border-shopmart-600">
+          <div class="product-img-wrap">
+            <?php echo getProductImage($product, '400x400'); ?>
+            <?php if($hasDiscount): ?>
+              <span class="discount-badge">-<?php echo $savePct; ?>%</span>
+            <?php endif; ?>
+          </div>
+          <div class="product-info">
+            <div class="product-title"><?php echo htmlspecialchars($product->name); ?></div>
+            <div class="mt-auto">
+              <span class="product-price">$<?php echo number_format($displayPrice, 2); ?></span>
+              <?php if($hasDiscount): ?>
+                <span class="product-price-orig">$<?php echo number_format($product->price, 2); ?></span>
+              <?php endif; ?>
+            </div>
+            <div class="product-meta mt-3 pt-3 border-t border-gray-100">
+              <div class="flex items-center text-yellow-400">
+                ★<span class="text-gray-600 ml-1 text-[10px] font-bold"><?php echo number_format(rand(42, 50) / 10, 1); ?></span>
+              </div>
+              <span class="text-[10px] text-gray-400 font-medium"><?php echo rand(10, 300); ?> sold</span>
+            </div>
+          </div>
         </a>
+      <?php endforeach; ?>
     </div>
-
-    <!-- Products Grid -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
-        <?php if($allProducts): ?>
-            <?php foreach($allProducts as $product) : ?>
-                <div class="group cursor-pointer">
-                    <div class="relative aspect-[3/4.5] bg-[#0c0c0c] rounded-xl overflow-hidden border border-white/5 shadow-xl transition-all duration-500 group-hover:-translate-y-2 group-hover:shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
-                        <!-- Book Cover Mockup -->
-                        <div class="absolute inset-0 flex items-center justify-center p-8">
-                            <div class="relative w-full h-full shadow-[20px_20px_40px_rgba(0,0,0,0.8)] transform -rotate-2 group-hover:rotate-0 transition-transform duration-700">
-                                <?php echo getBookCoverImage($product->isbn, $product->name, 'M', 'w-full h-full object-cover rounded-sm'); ?>
-                                <div class="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/60 to-transparent"></div>
-                            </div>
-                        </div>
-                        
-                        <!-- Hover Action -->
-                        <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                            <a href="<?php echo APPURL; ?>shopping/single.php?id=<?php echo $product->id; ?>" class="bg-white text-black px-6 py-2.5 rounded-full text-xs font-semibold uppercase tracking-widest transform translate-y-4 group-hover:translate-y-0 transition-transform">
-                                Discover
-                            </a>
-                        </div>
-                    </div>
-
-                    <div class="mt-6 space-y-1">
-                        <div class="flex justify-between items-start">
-                            <h3 class="text-white font-medium text-sm group-hover:text-white/70 transition-colors line-clamp-1 flex-1">
-                                <?php echo htmlspecialchars($product->name); ?>
-                            </h3>
-                            <span class="text-white/40 text-xs ml-4">#<?php echo substr($product->isbn, -4); ?></span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <p class="text-white/80 font-semibold">$<?php echo number_format($product->price, 2); ?></p>
-                            <?php if(isset($product->discount_price) && $product->discount_price > 0): ?>
-                                <p class="text-white/20 text-xs line-through">$<?php echo number_format($product->discount_price, 2); ?></p>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                </div>
-            <?php endforeach; ?>
-        <?php else: ?>
-            <div class="col-span-full h-[400px] flex items-center justify-center glass rounded-3xl">
-                <div class="text-center opacity-20">
-                    <i data-lucide="book-x" class="w-12 h-12 mx-auto mb-4"></i>
-                    <p class="uppercase tracking-widest text-xs">Collection is being curated</p>
-                </div>
-            </div>
-        <?php endif; ?>
+    <div class="mt-8 text-center">
+       <a href="<?php echo APPURL; ?>categories/index.php" class="inline-block px-12 py-3 bg-white border border-gray-300 text-gray-700 font-medium rounded-sm hover:bg-gray-50 transition-colors text-sm">See More</a>
     </div>
+    <?php else: ?>
+    <div class="text-center py-16">
+      <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+         <i data-lucide="package" style="width:32px; height:32px; color: #9ca3af;"></i>
+      </div>
+      <h3 class="text-base font-semibold text-gray-700">No products available yet</h3>
+      <p class="text-sm text-gray-500 mt-1">Check back soon for new arrivals!</p>
+    </div>
+    <?php endif; ?>
+  </div>
 </section>
 
-
-
-<?php require 'includes/footer.php'; ?>
-
+<?php require_once 'includes/footer.php'; ?>

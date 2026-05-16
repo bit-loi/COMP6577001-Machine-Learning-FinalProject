@@ -4,7 +4,7 @@ services:
   # PHP Apache Web Server
   web:
     build: .
-    container_name: bookstore-web
+    container_name: shopmart-web
     ports:
       - "8080:80"
     volumes:
@@ -12,7 +12,7 @@ services:
     depends_on:
       - db
     networks:
-      - bookstore-network
+      - shopmart-network
     environment:
       - APACHE_DOCUMENT_ROOT=/var/www/html
     restart: unless-stopped
@@ -20,25 +20,25 @@ services:
   # MySQL Database
   db:
     image: mysql:8.0
-    container_name: bookstore-db
+    container_name: shopmart-db
     ports:
       - "3307:3306"
     environment:
       MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: bookstore
-      MYSQL_USER: bookstore_user
-      MYSQL_PASSWORD: bookstore_pass
+      MYSQL_DATABASE: shopmart
+      MYSQL_USER: shopmart_user
+      MYSQL_PASSWORD: shopmart_pass
     volumes:
       - db_data:/var/lib/mysql
       - ./database:/docker-entrypoint-initdb.d
     networks:
-      - bookstore-network
+      - shopmart-network
     restart: unless-stopped
 
   # phpMyAdmin for database management
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
-    container_name: bookstore-phpmyadmin
+    container_name: shopmart-phpmyadmin
     ports:
       - "8081:80"
     environment:
@@ -48,11 +48,11 @@ services:
     depends_on:
       - db
     networks:
-      - bookstore-network
+      - shopmart-network
     restart: unless-stopped
 
 networks:
-  bookstore-network:
+  shopmart-network:
     driver: bridge
 
 volumes:

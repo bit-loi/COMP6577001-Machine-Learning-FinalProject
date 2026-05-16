@@ -2,293 +2,173 @@
 session_start();
 require '../config/config.php';
 require '../middleware/auth.php';
+require '../includes/product-image.php';
 
-// If form is submitted, process the Dummy Payment Gateway Simulation
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+// Fetch cart for checkout
+$stmt = $conn->prepare("SELECT c.*, p.name, p.price, p.discount_price, p.image, p.brand FROM cart c JOIN products p ON c.product_id = p.id WHERE c.user_id = ?");
+$stmt->execute([$_SESSION['user_id']]);
+$cartItems = $stmt->fetchAll(PDO::FETCH_OBJ);
+
+$subtotal = 0;
+foreach ($cartItems as $item) {
+    $itemPrice = ($item->discount_price && $item->discount_price > 0) ? $item->discount_price : $item->price;
+    $subtotal += $itemPrice * $item->quantity;
+}
+$tax = round($subtotal * 0.1, 2);
+$shipping = $subtotal >= 50 ? 0 : 5.99;
+$total = $subtotal + $tax + $shipping;
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $cartItems) {
     try {
-        // Here we simulate the checkout process without checking a real bank balance.
-        $userId = $_SESSION['user_id'] ?? 1; // Fallback to 1 if session user_id missing
-        $totalAmount = 62.66; // Hardcoded dummy amount based on the UI
-        $status = 'pending'; // Normal E-commerce starts with pending
+        $userId = $_SESSION['user_id'];
+        $orderNumber = 'SM-' . strtoupper(uniqid());
         
-        // Insert dummy transaction into orders table for ML scanning later!
-        $stmt = $conn->prepare("INSERT INTO orders (user_id, total_amount, status, created_at) VALUES (:user_id, :total_amount, :status, NOW())");
-        $stmt->execute([
-            ':user_id' => $userId,
-            ':total_amount' => $totalAmount,
-            ':status' => $status
-        ]);
-        
-        // Success redirect
-        $_SESSION['checkout_success'] = "Payment Simulation Successful! Your order has been placed and is now being analyzed by our AI System.";
+        $stmt = $conn->prepare("INSERT INTO orders (user_id, order_number, total_amount, shipping_address, shipping_city, shipping_zip, payment_method, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', NOW())");
+        $stmt->execute([$userId, $orderNumber, $total, $_POST['address'] ?? '', $_POST['city'] ?? '', $_POST['zip'] ?? '', $_POST['payment'] ?? 'card']);
+        $orderId = $conn->lastInsertId();
+
+        // Handle Wallet Payment
+        if (($_POST['payment'] ?? '') === 'wallet') {
+            $stmtWallet = $conn->prepare("SELECT wallet_balance FROM users WHERE id = ?");
+            $stmtWallet->execute([$userId]);
+            $wallet = $stmtWallet->fetchColumn();
+            
+            if ($wallet >= 0 && $wallet < $total) {
+                throw new Exception("Insufficient wallet balance. You have $" . number_format($wallet, 2));
+            }
+            
+            if ($wallet >= 0) {
+                // Deduct balance
+                $conn->prepare("UPDATE users SET wallet_balance = wallet_balance - ? WHERE id = ?")->execute([$total, $userId]);
+            }
+        }
+
+        foreach ($cartItems as $item) {
+            $itemPrice = ($item->discount_price && $item->discount_price > 0) ? $item->discount_price : $item->price;
+            $stmt = $conn->prepare("INSERT INTO order_items (order_id, product_id, product_name, price, quantity, subtotal) VALUES (?, ?, ?, ?, ?, ?)");
+            $stmt->execute([$orderId, $item->product_id, $item->name, $itemPrice, $item->quantity, $itemPrice * $item->quantity]);
+            
+            // If item has a seller, credit their wallet
+            $stmtSeller = $conn->prepare("SELECT seller_id FROM products WHERE id = ?");
+            $stmtSeller->execute([$item->product_id]);
+            $sellerId = $stmtSeller->fetchColumn();
+            if ($sellerId) {
+                $conn->prepare("UPDATE users SET wallet_balance = wallet_balance + ? WHERE id = ? AND wallet_balance >= 0")->execute([$itemPrice * $item->quantity, $sellerId]);
+            }
+        }
+
+        // Clear cart
+        $conn->prepare("DELETE FROM cart WHERE user_id = ?")->execute([$userId]);
+
+        $_SESSION['checkout_success'] = "Order #$orderNumber placed successfully!";
         header("Location: checkout.php?success=1");
         exit;
+    } catch (Exception $e) {
+        $errorMsg = $e->getMessage();
     } catch (PDOException $e) {
-        $errorMsg = "Order failed to save: " . $e->getMessage();
+        $errorMsg = "Order failed. Please try again.";
     }
 }
 ?>
 <?php include '../includes/header.php'; ?>
 
-<div class="container my-5">
+<div style="background: #f5f5f5; min-height: 60vh; padding: 40px 0;">
+    <div class="max-w-7xl mx-auto px-6 lg:px-12">
+        <h1 style="font-size: 1.5rem; font-weight: 800; color: #222; margin-bottom: 32px;">Checkout</h1>
 
-    <!-- Page Header -->
-    <div class="text-center mb-5">
-        <h1 class="display-4 mb-3">
-            <span class="gradient-text">Secure Checkout</span>
-        </h1>
-        <p class="lead text-muted">Complete your purchase securely</p>
+        <?php if (isset($_GET['success'])): ?>
+        <div style="text-align: center; padding: 60px 40px; background: #fff; border-radius: 16px; border: 1px solid #eee;">
+            <div style="font-size: 3rem; margin-bottom: 16px;">🎉</div>
+            <h2 style="font-size: 1.5rem; font-weight: 800; color: #059669; margin-bottom: 8px;">Order Placed!</h2>
+            <p style="color: #666; margin-bottom: 24px;"><?php echo htmlspecialchars($_SESSION['checkout_success'] ?? 'Your order is being processed.'); ?></p>
+            <?php unset($_SESSION['checkout_success']); ?>
+            <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+                <a href="<?php echo APPURL; ?>account/purchases.php" style="padding: 12px 24px; background: #fff; color: #EE4D2D; font-weight: 600; border-radius: 10px; text-decoration: none; border: 2px solid #EE4D2D;">Lihat Pesanan Saya</a>
+                <a href="<?php echo APPURL; ?>" style="padding: 12px 24px; background: #FF6B35; color: white; font-weight: 600; border-radius: 10px; text-decoration: none;">Continue Shopping</a>
+            </div>
+        </div>
+        <?php elseif(!$cartItems): ?>
+        <div style="text-align: center; padding: 60px 40px; background: #fff; border-radius: 16px; border: 1px solid #eee;">
+            <h3 style="color: #555;">Your cart is empty</h3>
+            <a href="<?php echo APPURL; ?>" style="color: #FF6B35; text-decoration: none; font-weight: 600;">← Go shopping</a>
+        </div>
+        <?php else: ?>
+        <?php if (isset($errorMsg)): ?>
+            <div style="padding: 16px; background: #FEE2E2; color: #DC2626; border-radius: 10px; margin-bottom: 20px;"><?php echo $errorMsg; ?></div>
+        <?php endif; ?>
+        <form method="POST">
+            <div style="display: grid; grid-template-columns: 1fr 380px; gap: 24px; align-items: start;">
+                <div>
+                    <!-- Shipping -->
+                    <div style="background: #fff; border-radius: 16px; border: 1px solid #eee; padding: 24px; margin-bottom: 20px;">
+                        <h3 style="font-size: 1rem; font-weight: 700; margin: 0 0 20px;">Shipping Address</h3>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                            <div><label style="font-size: 0.8rem; font-weight: 600; color: #555; display: block; margin-bottom: 6px;">First Name</label><input type="text" name="first_name" required style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; font-size: 0.9rem; outline: none;"></div>
+                            <div><label style="font-size: 0.8rem; font-weight: 600; color: #555; display: block; margin-bottom: 6px;">Last Name</label><input type="text" name="last_name" required style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; font-size: 0.9rem; outline: none;"></div>
+                        </div>
+                        <div style="margin-top: 16px;"><label style="font-size: 0.8rem; font-weight: 600; color: #555; display: block; margin-bottom: 6px;">Address</label><input type="text" name="address" required style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; font-size: 0.9rem; outline: none;"></div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-top: 16px;">
+                            <div><label style="font-size: 0.8rem; font-weight: 600; color: #555; display: block; margin-bottom: 6px;">City</label><input type="text" name="city" required style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; font-size: 0.9rem; outline: none;"></div>
+                            <div><label style="font-size: 0.8rem; font-weight: 600; color: #555; display: block; margin-bottom: 6px;">State</label><input type="text" name="state" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; font-size: 0.9rem; outline: none;"></div>
+                            <div><label style="font-size: 0.8rem; font-weight: 600; color: #555; display: block; margin-bottom: 6px;">Zip Code</label><input type="text" name="zip" required style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; font-size: 0.9rem; outline: none;"></div>
+                        </div>
+                    </div>
+                    <!-- Payment -->
+                    <div style="background: #fff; border-radius: 16px; border: 1px solid #eee; padding: 24px;">
+                        <h3 style="font-size: 1rem; font-weight: 700; margin: 0 0 20px;">Payment Method</h3>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
+                            <label style="display: flex; align-items: center; gap: 8px; padding: 16px; border: 2px solid #FF6B35; border-radius: 12px; cursor: pointer; background: #FFF4ED;">
+                                <input type="radio" name="payment" value="wallet" checked> 
+                                <div>
+                                    <span style="font-weight: 600; font-size: 0.85rem; display:block;">My Wallet</span>
+                                    <span style="font-size: 0.75rem; color:#666; display:flex; align-items:center; gap:4px;">Balance: <?php 
+                                        $stmtWallet = $conn->prepare("SELECT wallet_balance FROM users WHERE id = ?");
+                                        $stmtWallet->execute([$_SESSION['user_id']]);
+                                        $bal = $stmtWallet->fetchColumn();
+                                        if ($bal < 0) {
+                                            echo '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12c-2-2.67-4-4-6-4a4 4 0 1 0 0 8c2 0 4-1.33 6-4Zm0 0c2 2.67 4 4 6 4a4 4 0 1 0 0-8c-2 0-4 1.33-6 4Z"/></svg> (Admin)';
+                                        } else {
+                                            echo '$'.number_format($bal, 2);
+                                        }
+                                    ?></span>
+                                </div>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; padding: 16px; border: 1px solid #ddd; border-radius: 12px; cursor: pointer;">
+                                <input type="radio" name="payment" value="card"> <span style="font-weight: 600; font-size: 0.85rem;">Credit Card</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; padding: 16px; border: 1px solid #ddd; border-radius: 12px; cursor: pointer;">
+                                <input type="radio" name="payment" value="cod"> <span style="font-weight: 600; font-size: 0.85rem;">COD</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Summary -->
+                <div style="background: #fff; border-radius: 16px; border: 1px solid #eee; padding: 24px; position: sticky; top: 100px;">
+                    <h3 style="font-size: 1rem; font-weight: 700; margin: 0 0 20px;">Order Summary</h3>
+                    <?php foreach($cartItems as $item):
+                        $itemPrice = ($item->discount_price && $item->discount_price > 0) ? $item->discount_price : $item->price;
+                    ?>
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+                        <div style="width: 48px; height: 48px; border-radius: 8px; overflow: hidden; background: #f9f9f9; flex-shrink: 0;">
+                            <?php echo getProductImage($item, '96x96', '', ['style' => 'width:100%; height:100%; object-fit:cover;']); ?>
+                        </div>
+                        <div style="flex: 1;"><div style="font-size: 0.8rem; font-weight: 600; color: #333;"><?php echo htmlspecialchars($item->name); ?></div><div style="font-size: 0.7rem; color: #999;">Qty: <?php echo $item->quantity; ?></div></div>
+                        <div style="font-weight: 600; font-size: 0.85rem;">$<?php echo number_format($itemPrice * $item->quantity, 2); ?></div>
+                    </div>
+                    <?php endforeach; ?>
+                    <div style="height: 1px; background: #eee; margin: 16px 0;"></div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;"><span style="color: #888; font-size: 0.85rem;">Subtotal</span><span style="font-weight: 600;">$<?php echo number_format($subtotal, 2); ?></span></div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;"><span style="color: #888; font-size: 0.85rem;">Shipping</span><span style="font-weight: 600; color: <?php echo $shipping == 0 ? '#059669' : '#333'; ?>;"><?php echo $shipping == 0 ? 'FREE' : '$' . number_format($shipping, 2); ?></span></div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 16px;"><span style="color: #888; font-size: 0.85rem;">Tax</span><span style="font-weight: 600;">$<?php echo number_format($tax, 2); ?></span></div>
+                    <div style="height: 1px; background: #eee; margin-bottom: 16px;"></div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 24px;"><span style="font-weight: 700; font-size: 1.1rem;">Total</span><span style="font-weight: 800; font-size: 1.3rem; color: #EE4D2D;">$<?php echo number_format($total, 2); ?></span></div>
+                    <button type="submit" style="display: block; width: 100%; padding: 16px; background: #FF6B35; color: white; font-weight: 700; font-size: 0.9rem; border: none; border-radius: 12px; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='#EE4D2D'" onmouseout="this.style.background='#FF6B35'">Place Order</button>
+                </div>
+            </div>
+        </form>
+        <?php endif; ?>
     </div>
-
-    <?php if (isset($_GET['success'])): ?>
-        <div class="alert alert-success d-flex align-items-center mb-4 border-0 shadow-sm rounded-4 p-4" role="alert" style="background-color: #d1fae5; color: #065f46;">
-            <i class="fas fa-check-circle fa-2x me-3"></i>
-            <div>
-                <h5 class="mb-1 fw-bold">Transaction Successful!</h5>
-                <p class="mb-0"><?php echo htmlspecialchars($_SESSION['checkout_success'] ?? 'Order placed.'); ?></p>
-            </div>
-        </div>
-        <?php unset($_SESSION['checkout_success']); ?>
-        <div class="text-center mt-5 mb-5 pb-5">
-             <a href="../admin/index.php" class="btn btn-outline-primary rounded-pill px-4">Go to Admin Dashboard to See AI Analysis</a>
-             <a href="../index.php" class="btn btn-primary rounded-pill px-4 ms-2">Continue Shopping</a>
-        </div>
-    <?php else: ?>
-
-    <?php if (isset($errorMsg)): ?>
-        <div class="alert alert-danger mb-4"><?php echo $errorMsg; ?></div>
-    <?php endif; ?>
-
-    <form method="POST" action="checkout.php">
-        <div class="row g-4">
-            
-            <!-- Checkout Form -->
-            <div class="col-lg-8">
-                <div class="card shadow-sm border-0 mb-4 rounded-4">
-                    <div class="card-header bg-white py-3 border-bottom-0 pt-4 px-4">
-                        <h5 class="mb-0 fw-bold">
-                            <i class="fas fa-user-circle me-2 text-primary"></i>Customer Information
-                        </h5>
-                    </div>
-                    <div class="card-body p-4">
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold">First Name *</label>
-                                <input type="text" name="first_name" class="form-control" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold">Last Name *</label>
-                                <input type="text" name="last_name" class="form-control" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold">Email *</label>
-                                <input type="email" name="email" class="form-control" placeholder="you@example.com" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold">Phone Number *</label>
-                                <input type="tel" name="phone" class="form-control" placeholder="+1 (555) 000-0000" required>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card shadow-sm border-0 mb-4 rounded-4">
-                    <div class="card-header bg-white py-3 border-bottom-0 pt-4 px-4">
-                        <h5 class="mb-0 fw-bold">
-                            <i class="fas fa-shipping-fast me-2 text-primary"></i>Shipping Address
-                        </h5>
-                    </div>
-                    <div class="card-body p-4">
-                        <div class="row g-3">
-                            <div class="col-12">
-                                <label class="form-label fw-bold">Street Address *</label>
-                                <input type="text" name="address" class="form-control" placeholder="1234 Main St" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold">City *</label>
-                                <select name="city" class="form-select" required>
-                                    <option value="" selected disabled>Choose City</option>
-                                    <option value="New York">New York</option>
-                                    <option value="Los Angeles">Los Angeles</option>
-                                    <option value="Chicago">Chicago</option>
-                                    <option value="Houston">Houston</option>
-                                    <option value="Phoenix">Phoenix</option>
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label fw-bold">State *</label>
-                                <select name="state" class="form-select" required>
-                                    <option value="" selected disabled>State</option>
-                                    <option value="CA">CA</option>
-                                    <option value="NY">NY</option>
-                                    <option value="TX">TX</option>
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label fw-bold">Zip Code *</label>
-                                <input type="text" name="zip" class="form-control" placeholder="10001" required>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card shadow-sm border-0 rounded-4">
-                    <div class="card-header bg-white py-3 border-bottom-0 pt-4 px-4">
-                        <h5 class="mb-0 fw-bold">
-                            <i class="fas fa-credit-card me-2 text-primary"></i>Payment Method (Simulation)
-                        </h5>
-                    </div>
-                    <div class="card-body p-4">
-                        <div class="row g-3 mb-4">
-                            <div class="col-md-4">
-                                <div class="form-check card p-3 border" style="cursor: pointer;">
-                                    <input class="form-check-input" type="radio" value="card" name="payment" id="card" checked>
-                                    <label class="form-check-label w-100" for="card">
-                                        <div class="d-flex align-items-center">
-                                            <i class="fas fa-credit-card fa-2x me-3 text-primary"></i>
-                                            <div>
-                                                <strong>Credit Card</strong>
-                                                <small class="d-block text-muted">Visa, Mastercard</small>
-                                            </div>
-                                        </div>
-                                    </label>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="form-check card p-3 border" style="cursor: pointer;">
-                                    <input class="form-check-input" type="radio" value="paypal" name="payment" id="paypal">
-                                    <label class="form-check-label w-100" for="paypal">
-                                        <div class="d-flex align-items-center">
-                                            <i class="fab fa-paypal fa-2x me-3 text-info"></i>
-                                            <div>
-                                                <strong>PayPal</strong>
-                                                <small class="d-block text-muted">Fast & Secure</small>
-                                            </div>
-                                        </div>
-                                    </label>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="form-check card p-3 border" style="cursor: pointer;">
-                                    <input class="form-check-input" type="radio" value="cod" name="payment" id="cod">
-                                    <label class="form-check-label w-100" for="cod">
-                                        <div class="d-flex align-items-center">
-                                            <i class="fas fa-money-bill-wave fa-2x me-3 text-success"></i>
-                                            <div>
-                                                <strong>Cash on Delivery</strong>
-                                                <small class="d-block text-muted">Pay at doorstep</small>
-                                            </div>
-                                        </div>
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div id="cardDetails" class="bg-light p-4 rounded-3">
-                            <div class="row g-3">
-                                <div class="col-12">
-                                    <label class="form-label fw-bold">Card Number (Mock Data)</label>
-                                    <input type="text" name="card_number" class="form-control" placeholder="1234 5678 9012 3456" required>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label fw-bold">Expiry Date</label>
-                                    <input type="text" name="card_expiry" class="form-control" placeholder="MM/YY" required>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label fw-bold">CVV</label>
-                                    <input type="text" name="card_cvv" class="form-control" placeholder="123" required>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Order Summary -->
-            <div class="col-lg-4">
-                <div class="card shadow-sm border-0 sticky-top rounded-4" style="top: 100px;">
-                    <div class="card-header bg-white py-3 border-bottom-0 pt-4 px-4">
-                        <h5 class="mb-0 fw-bold">Order Summary</h5>
-                    </div>
-                    <div class="card-body px-4 pb-4">
-                        <!-- Cart Items Summary -->
-                        <div class="mb-3">
-                            <div class="d-flex justify-content-between mb-3">
-                                <div class="d-flex align-items-center">
-                                    <img src="https://via.placeholder.com/50x70/667eea/ffffff?text=1" class="rounded me-3 shadow-sm" style="width: 45px; height: 60px; object-fit: cover;">
-                                    <div>
-                                        <span class="fw-bold d-block text-dark">The Great Gatsby</span>
-                                        <small class="text-muted">Qty: 1</small>
-                                    </div>
-                                </div>
-                                <span class="fw-bold text-dark mt-2">$12.99</span>
-                            </div>
-                            <div class="d-flex justify-content-between mb-3">
-                                <div class="d-flex align-items-center">
-                                    <img src="https://via.placeholder.com/50x70/f5576c/ffffff?text=2" class="rounded me-3 shadow-sm" style="width: 45px; height: 60px; object-fit: cover;">
-                                    <div>
-                                        <span class="fw-bold d-block text-dark">To Kill a Mockingbird</span>
-                                        <small class="text-muted">Qty: 2</small>
-                                    </div>
-                                </div>
-                                <span class="fw-bold text-dark mt-2">$29.98</span>
-                            </div>
-                            <div class="d-flex justify-content-between mb-3">
-                                <div class="d-flex align-items-center">
-                                    <img src="https://via.placeholder.com/50x70/4facfe/ffffff?text=3" class="rounded me-3 shadow-sm" style="width: 45px; height: 60px; object-fit: cover;">
-                                    <div>
-                                        <span class="fw-bold d-block text-dark">1984</span>
-                                        <small class="text-muted">Qty: 1</small>
-                                    </div>
-                                </div>
-                                <span class="fw-bold text-dark mt-2">$13.99</span>
-                            </div>
-                        </div>
-
-                        <hr class="text-muted opacity-25">
-
-                        <!-- Price Breakdown -->
-                        <div class="d-flex justify-content-between mb-2">
-                            <span class="text-muted">Subtotal:</span>
-                            <span class="fw-bold text-dark">$56.96</span>
-                        </div>
-                        <div class="d-flex justify-content-between mb-2">
-                            <span class="text-muted">Shipping:</span>
-                            <span class="text-success fw-bold">FREE</span>
-                        </div>
-                        <div class="d-flex justify-content-between mb-3">
-                            <span class="text-muted">Tax (10%):</span>
-                            <span class="fw-bold text-dark">$5.70</span>
-                        </div>
-
-                        <hr class="my-3 text-muted opacity-25">
-
-                        <div class="d-flex justify-content-between mb-4 mt-2">
-                            <span class="fw-bold fs-5 text-dark">Total:</span>
-                            <span class="fw-bold fs-5 text-primary">$62.66</span>
-                        </div>
-
-                        <!-- Place Order Button -->
-                        <button type="submit" class="btn btn-primary btn-lg w-100 mb-3 rounded-pill py-3 fw-bold shadow-sm">
-                            <i class="fas fa-lock me-2"></i>Place Order
-                        </button>
-
-                        <!-- Security Badges -->
-                        <div class="text-center mt-4">
-                            <small class="text-muted d-block mb-2">
-                                <i class="fas fa-shield-alt me-1 text-success"></i>Secure & Encrypted Checkout
-                            </small>
-                            <small class="text-muted d-block">
-                                <i class="fas fa-robot me-1 text-info"></i>Transactions Protected by A.I. Anomaly Detection
-                            </small>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-        </div>
-    </form>
-    <?php endif; ?>
 </div>
 
 <?php require '../includes/footer.php'; ?>
