@@ -95,7 +95,7 @@ body { background: #f5f5f5; }
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
         <div style="background:linear-gradient(135deg,#FEF3C7,#FDE68A);border-radius:12px;padding:16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:transform .15s,box-shadow .15s;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 16px rgba(0,0,0,0.1)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
           <div style="width:40px;height:40px;background:#FFFBEB;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-            <i data-lucide="zap" style="width:22px;height:22px;color:#D97706;"></i>
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
           </div>
           <div>
             <div style="font-size:0.88rem;font-weight:700;color:#92400E;">Flash Sale</div>
@@ -104,7 +104,7 @@ body { background: #f5f5f5; }
         </div>
         <div style="background:linear-gradient(135deg,#D1FAE5,#A7F3D0);border-radius:12px;padding:16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:transform .15s,box-shadow .15s;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 16px rgba(0,0,0,0.1)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
           <div style="width:40px;height:40px;background:#ECFDF5;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-            <i data-lucide="truck" style="width:22px;height:22px;color:#059669;"></i>
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="2" ry="2"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
           </div>
           <div>
             <div style="font-size:0.88rem;font-weight:700;color:#065F46;">Free Shipping</div>
@@ -142,7 +142,7 @@ $catIcons = [
       ?>
       <a href="<?php echo APPURL; ?>categories/index.php?id=<?php echo $cat->id; ?>" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px 8px 12px;border-radius:10px;background:<?php echo $catStyle['bg']; ?>;text-decoration:none;transition:transform .15s,box-shadow .15s;" onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 6px 20px rgba(0,0,0,0.08)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
         <div style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;">
-          <i data-lucide="<?php echo $catStyle['icon'] ?? 'package'; ?>" style="width:26px;height:26px;color:<?php echo $catStyle['color']; ?>;stroke-width:2;"></i>
+          <i data-lucide="<?php echo $catStyle['icon'] ?? 'package'; ?>" style="width:26px;height:26px;color:<?php echo $catStyle['color']; ?>;"></i>
         </div>
         <div style="font-size:0.72rem;font-weight:600;color:<?php echo $catStyle['color']; ?>;text-align:center;line-height:1.3;"><?php echo htmlspecialchars($cat->name); ?></div>
         <div style="font-size:0.62rem;color:#aaa;margin-top:2px;"><?php echo $cat->product_count; ?> items</div>

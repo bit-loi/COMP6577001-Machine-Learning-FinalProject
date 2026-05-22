@@ -8,10 +8,19 @@ if (!isset($_SESSION['is_admin']) || $_SESSION['is_admin'] != 1) {
 
 require_once '../../config/config.php';
 
+// Generate CSRF token
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
 $error = '';
 $success = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // CSRF validation
+    if (empty($_POST['csrf_token']) || !isset($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+        $error = 'Invalid security token. Please refresh the page.';
+    } else {
     $username = trim($_POST['username'] ?? '');
     $email = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
@@ -29,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = "Username or email already exists.";
         } else {
             try {
-                $hashed = password_hash($password, PASSWORD_DEFAULT);
+                $hashed = password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);
                 $isAdmin = ($role === 'admin') ? 1 : 0;
                 $wallet = ($role === 'admin') ? -1.00 : 500.00;
                 
@@ -38,10 +47,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 $success = "User successfully added!";
             } catch (PDOException $e) {
-                $error = "Failed to add user: " . $e->getMessage();
+                error_log('Admin add user error: ' . $e->getMessage());
+                $error = "Failed to add user. Please try again.";
             }
         }
     }
+    } // end CSRF check
 }
 
 $pageTitle = 'Add New User';
@@ -64,6 +75,7 @@ require_once '../includes/header.php';
     <?php endif; ?>
 
     <form method="POST" action="">
+        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
             <div>
                 <label style="display: block; font-size: 0.8rem; font-weight: 600; color: #475569; margin-bottom: 6px;">Username *</label>

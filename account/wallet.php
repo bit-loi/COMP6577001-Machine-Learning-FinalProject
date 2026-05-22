@@ -29,8 +29,16 @@ if ($accountName === '') {
 }
 $isAdminWallet = ($walletBalance < 0);
 
+// Generate CSRF token
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['topup'])) {
-    if ($isAdminWallet) {
+    // CSRF validation
+    if (empty($_POST['csrf_token']) || !isset($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+        $errorMsg = 'Invalid security token. Please refresh the page.';
+    } elseif ($isAdminWallet) {
         $errorMsg = 'Akun admin memiliki saldo unlimited dan tidak perlu top-up.';
     } else {
         $amount = round((float)($_POST['amount'] ?? 0), 2);
@@ -127,6 +135,7 @@ include 'includes/styles.php';
                     </h2>
                     <form method="POST" id="topup-form">
                         <input type="hidden" name="topup" value="1">
+                        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
                         <div style="margin-bottom:22px;">
                             <label style="font-size:0.8rem;font-weight:700;color:#444;display:block;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.04em;">Pilih Nominal</label>
                             <div style="display:flex;flex-wrap:wrap;gap:10px;" id="amount-buttons">

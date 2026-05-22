@@ -1,16 +1,30 @@
 <?php require 'includes/header.php'; ?>
 <?php require 'config/config.php'; ?>
 <?php
+
+// Generate CSRF token
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
 $successMessage = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $name = trim($_POST['name'] ?? '');
-    $email = trim($_POST['email'] ?? '');
-    $subject = trim($_POST['subject'] ?? '');
-    $message = trim($_POST['message'] ?? '');
-    if ($name && $email && $message) {
-        $stmt = $conn->prepare("INSERT INTO contact_messages (name, email, subject, message) VALUES (?, ?, ?, ?)");
-        $stmt->execute([$name, $email, $subject, $message]);
-        $successMessage = 'Message sent successfully! We\'ll get back to you soon.';
+    // CSRF validation
+    if (empty($_POST['csrf_token']) || !isset($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+        $successMessage = 'Invalid security token. Please refresh the page.';
+    } else {
+        $name = trim($_POST['name'] ?? '');
+        $email = trim($_POST['email'] ?? '');
+        $subject = trim($_POST['subject'] ?? '');
+        $message = trim($_POST['message'] ?? '');
+        if ($name && $email && $message) {
+            $stmt = $conn->prepare("INSERT INTO contact_messages (name, email, subject, message) VALUES (?, ?, ?, ?)");
+            $stmt->execute([$name, $email, $subject, $message]);
+            $successMessage = 'Message sent successfully! We\'ll get back to you soon.';
+        }
     }
 }
 ?>
@@ -28,12 +42,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div style="background: #fff; border-radius: 16px; border: 1px solid #eee; padding: 48px;">
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 48px;">
                 <div>
-                    <h2 style="font-size: 1.3rem; font-weight: 700; color: #222; margin: 0 0 20px;">Get in Touch</h2>
-                    <div style="margin-bottom: 20px;"><div style="font-size: 0.8rem; font-weight: 600; color: #999; margin-bottom: 4px;">Email</div><div style="color: #333;">hello@shopmart.com</div></div>
-                    <div style="margin-bottom: 20px;"><div style="font-size: 0.8rem; font-weight: 600; color: #999; margin-bottom: 4px;">Phone</div><div style="color: #333;">+1 (555) 000-0000</div></div>
-                    <div><div style="font-size: 0.8rem; font-weight: 600; color: #999; margin-bottom: 4px;">Hours</div><div style="color: #333;">Mon–Fri: 9am–6pm</div></div>
+                    <h2 style="font-size: 1.3rem; font-weight: 700; color: #222; margin: 0 0 24px; display: flex; align-items: center; gap: 10px;">
+                        <i data-lucide="message-square" style="width: 22px; height: 22px; color: #FF6B35;"></i> Get in Touch
+                    </h2>
+                    
+                    <div style="margin-bottom: 20px; display: flex; gap: 12px; align-items: flex-start;">
+                        <div style="width: 36px; height: 36px; background: #FFF4ED; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                            <i data-lucide="mail" style="width: 18px; height: 18px; color: #FF6B35;"></i>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.8rem; font-weight: 600; color: #999; margin-bottom: 2px;">Email</div>
+                            <div style="color: #333; font-weight: 500;">hello@shopmart.com</div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-bottom: 20px; display: flex; gap: 12px; align-items: flex-start;">
+                        <div style="width: 36px; height: 36px; background: #FFF4ED; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                            <i data-lucide="phone" style="width: 18px; height: 18px; color: #FF6B35;"></i>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.8rem; font-weight: 600; color: #999; margin-bottom: 2px;">Phone</div>
+                            <div style="color: #333; font-weight: 500;">+1 (555) 000-0000</div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-bottom: 20px; display: flex; gap: 12px; align-items: flex-start;">
+                        <div style="width: 36px; height: 36px; background: #FFF4ED; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                            <i data-lucide="clock" style="width: 18px; height: 18px; color: #FF6B35;"></i>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.8rem; font-weight: 600; color: #999; margin-bottom: 2px;">Hours</div>
+                            <div style="color: #333; font-weight: 500;">Mon–Fri: 9am–6pm</div>
+                        </div>
+                    </div>
                 </div>
                 <form method="POST" style="display: flex; flex-direction: column; gap: 16px;">
+                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
                     <div><label style="font-size: 0.8rem; font-weight: 600; color: #555; display: block; margin-bottom: 6px;">Name</label><input type="text" name="name" required style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; font-size: 0.9rem; outline: none; box-sizing: border-box;" onfocus="this.style.borderColor='#FF6B35'" onblur="this.style.borderColor='#ddd'"></div>
                     <div><label style="font-size: 0.8rem; font-weight: 600; color: #555; display: block; margin-bottom: 6px;">Email</label><input type="email" name="email" required style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; font-size: 0.9rem; outline: none; box-sizing: border-box;" onfocus="this.style.borderColor='#FF6B35'" onblur="this.style.borderColor='#ddd'"></div>
                     <div><label style="font-size: 0.8rem; font-weight: 600; color: #555; display: block; margin-bottom: 6px;">Subject</label><input type="text" name="subject" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; font-size: 0.9rem; outline: none; box-sizing: border-box;" onfocus="this.style.borderColor='#FF6B35'" onblur="this.style.borderColor='#ddd'"></div>

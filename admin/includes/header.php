@@ -28,7 +28,7 @@ elseif (strpos($currentPath, '/simulation.php') !== false) $activeMenu = 'simula
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.344.0/umd/lucide.min.js"></script>
+    <script src="<?php echo APPURL; ?>assets/js/lucide.min.js"></script>
     <style>
         * { box-sizing: border-box; }
         body { font-family: 'Inter', sans-serif; background: #f8fafc; color: #333; margin: 0; display: flex; min-height: 100vh; }
@@ -73,6 +73,15 @@ elseif (strpos($currentPath, '/simulation.php') !== false) $activeMenu = 'simula
         @media (max-width: 1200px) {
             .grid-layout { grid-template-columns: 1fr; }
         }
+        /* Topbar User Dropdown */
+        .user-dropdown-wrapper { position: relative; }
+        .user-dropdown { display: none; position: absolute; top: calc(100% + 8px); right: 0; background: #fff; border: 1px solid #f1f5f9; border-radius: 12px; box-shadow: 0 12px 32px rgba(0,0,0,0.08); min-width: 200px; z-index: 100; overflow: hidden; }
+        .user-dropdown.show { display: block; }
+        .user-dropdown-item { display: flex; align-items: center; gap: 10px; padding: 12px 16px; font-size: 0.82rem; font-weight: 600; color: #475569; text-decoration: none; transition: background 0.15s; cursor: pointer; border: none; background: none; width: 100%; font-family: inherit; }
+        .user-dropdown-item:hover { background: #f8fafc; }
+        .user-dropdown-item.logout { color: #ef4444; }
+        .user-dropdown-item.logout:hover { background: #fef2f2; }
+        .user-dropdown-divider { height: 1px; background: #f1f5f9; margin: 4px 0; }
     </style>
 </head>
 <body>
@@ -133,15 +142,40 @@ elseif (strpos($currentPath, '/simulation.php') !== false) $activeMenu = 'simula
             <?php if (isset($topbarAction)): ?>
             <div style="width: 1px; height: 24px; background: #e2e8f0; margin: 0 4px;"></div>
             <?php endif; ?>
-            <div style="display: flex; align-items: center; gap: 12px;">
-                <div style="width: 36px; height: 36px; border-radius: 50%; background: #EE4D2D; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 700; color: white;">
-                    <?php echo strtoupper(substr($_SESSION['username'], 0, 1)); ?>
+            <div class="user-dropdown-wrapper">
+                <div style="display: flex; align-items: center; gap: 12px; cursor: pointer; padding: 6px 10px; border-radius: 10px; transition: background 0.15s;" id="user-profile-toggle" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
+                    <div style="width: 36px; height: 36px; border-radius: 50%; background: #EE4D2D; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 700; color: white;">
+                        <?php echo strtoupper(substr($_SESSION['username'], 0, 1)); ?>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.85rem; font-weight: 600; color: #0f172a;"><?php echo htmlspecialchars($_SESSION['username']); ?></div>
+                        <div style="font-size: 0.7rem; color: #64748b;">Administrator</div>
+                    </div>
+                    <i data-lucide="chevron-down" style="width: 14px; height: 14px; color: #94a3b8;"></i>
                 </div>
-                <div>
-                    <div style="font-size: 0.85rem; font-weight: 600; color: #0f172a;"><?php echo htmlspecialchars($_SESSION['username']); ?></div>
-                    <div style="font-size: 0.7rem; color: #64748b;">Administrator</div>
+                <div class="user-dropdown" id="user-dropdown">
+                    <div style="padding: 14px 16px; border-bottom: 1px solid #f1f5f9;">
+                        <div style="font-size: 0.82rem; font-weight: 700; color: #0f172a;"><?php echo htmlspecialchars($_SESSION['username']); ?></div>
+                        <div style="font-size: 0.7rem; color: #94a3b8;">Admin · <?php echo htmlspecialchars($_SESSION['email'] ?? ''); ?></div>
+                    </div>
+                    <a href="<?php echo APPURL; ?>" target="_blank" class="user-dropdown-item">
+                        <i data-lucide="external-link" style="width:16px;height:16px;"></i> View Store
+                    </a>
+                    <div class="user-dropdown-divider"></div>
+                    <a href="<?php echo APPURL; ?>auth/logout.php" class="user-dropdown-item logout">
+                        <i data-lucide="log-out" style="width:16px;height:16px;"></i> Logout
+                    </a>
                 </div>
             </div>
+            <script>
+            document.getElementById('user-profile-toggle').addEventListener('click', function(e) {
+                e.stopPropagation();
+                document.getElementById('user-dropdown').classList.toggle('show');
+            });
+            document.addEventListener('click', function() {
+                document.getElementById('user-dropdown').classList.remove('show');
+            });
+            </script>
         </div>
     </div>
     

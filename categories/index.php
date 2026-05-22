@@ -151,11 +151,13 @@ body { background: #f5f5f5; }
 
             <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 <?php foreach($categories as $cat):
-                    $catStyle = $catIcons[$cat->slug] ?? ['svg'=>'<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>','bg'=>'#F5F5F5','color'=>'#555'];
+                    $catStyle = $catIcons[$cat->slug] ?? ['bg'=>'#F5F5F5','color'=>'#555'];
                 ?>
                 <a href="?id=<?php echo $cat->id; ?>" class="bg-white border border-gray-200 rounded-lg p-6 flex flex-col items-center text-center transition-all group" style="background:<?php echo $catStyle['bg']; ?>;" onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 6px 20px rgba(0,0,0,0.08)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
-                    <div class="w-16 h-16 rounded-full flex items-center justify-center mb-4 bg-white shadow-sm transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="<?php echo $catStyle['color']; ?>" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><?php echo $catStyle['svg']; ?></svg>
+                    <div class="w-16 h-16 rounded-full flex items-center justify-center mb-4 bg-white shadow-sm transition-colors" style="color: <?php echo $catStyle['color']; ?>;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <?php echo $catStyle['svg'] ?? '<circle cx="12" cy="12" r="10"/>'; ?>
+                        </svg>
                     </div>
                     <h3 class="font-bold mb-1" style="color:<?php echo $catStyle['color']; ?>;"><?php echo htmlspecialchars($cat->name); ?></h3>
                     <p class="text-xs text-gray-500 mb-3 line-clamp-2"><?php echo htmlspecialchars($cat->description ?? ''); ?></p>

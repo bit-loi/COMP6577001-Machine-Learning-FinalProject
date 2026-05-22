@@ -84,7 +84,9 @@ $total = $subtotal + $tax + $shipping;
 
             <!-- Order Summary -->
             <div style="background: #fff; border-radius: 16px; border: 1px solid #eee; padding: 24px; position: sticky; top: 100px;">
-                <h3 style="font-size: 1rem; font-weight: 700; color: #222; margin: 0 0 20px;">Order Summary</h3>
+                <h3 style="font-size: 1rem; font-weight: 700; color: #222; margin: 0 0 20px; display: flex; align-items: center; gap: 8px;">
+                    <i data-lucide="receipt" style="width: 18px; height: 18px; color: #FF6B35;"></i> Order Summary
+                </h3>
                 <div style="display: flex; justify-content: space-between; margin-bottom: 12px;"><span style="color: #888;">Subtotal (<?php echo count($cartItems); ?> items)</span><span style="font-weight: 600;">$<?php echo number_format($subtotal, 2); ?></span></div>
                 <div style="display: flex; justify-content: space-between; margin-bottom: 12px;"><span style="color: #888;">Shipping</span><span style="font-weight: 600; color: <?php echo $shipping == 0 ? '#059669' : '#333'; ?>;"><?php echo $shipping == 0 ? 'FREE' : '$' . number_format($shipping, 2); ?></span></div>
                 <div style="display: flex; justify-content: space-between; margin-bottom: 16px;"><span style="color: #888;">Tax (10%)</span><span style="font-weight: 600;">$<?php echo number_format($tax, 2); ?></span></div>

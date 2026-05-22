@@ -7,6 +7,7 @@ if (!isset($_SESSION['is_admin']) || $_SESSION['is_admin'] != 1) {
 }
 
 require_once '../../config/config.php';
+require_once '../../includes/product-image.php';
 
 // Fetch all products
 try {
@@ -63,8 +64,8 @@ require_once '../includes/header.php';
                             <tr>
                                 <td><span class="mono" style="color: #888;">#<?php echo str_pad($product->id, 4, '0', STR_PAD_LEFT); ?></span></td>
                                 <td>
-                                    <div style="width: 44px; height: 62px; overflow: hidden; border-radius: 8px; border: 1px solid #eee; background: #f9f9f9;">
-                                        <img src="https://placehold.co/88x124/FF6B35/FFFFFF?text=<?php echo urlencode(substr($product->name,0,6)); ?>" alt="Product" style="width: 100%; height: 100%; object-fit: cover;">
+                                    <div style="width: 44px; height: 62px; overflow: hidden; border-radius: 8px; border: 1px solid #eee; background: #f9f9f9; display: flex; align-items: center; justify-content: center;">
+                                        <?php echo getProductImage($product, '88x124', '', ['style' => 'width: 100%; height: 100%; object-fit: cover;']); ?>
                                     </div>
                                 </td>
                                 <td>

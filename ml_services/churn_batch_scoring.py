@@ -60,13 +60,13 @@ OUTPUT_COLS = [
 # ----------------------------------------------------------------
 def get_risk_and_action(prob: float, revenue: float) -> tuple[str, str]:
     if prob >= 0.75 and revenue >= 100:
-        return "High", "Send loyalty voucher"
+        return "Critical", "Send urgent retention offer"
     elif prob >= 0.75:
-        return "High", "Send reactivation email"
-    elif prob >= 0.50:
-        return "Medium", "Send product recommendation"
+        return "Critical", "Send reactivation email"
+    elif prob >= 0.45:
+        return "At Risk", "Send personalized promo"
     else:
-        return "Low", "No immediate action"
+        return "Loyal", "Maintain normal engagement"
 
 
 # ----------------------------------------------------------------
@@ -143,16 +143,16 @@ def run_batch_scoring(input_path: str, output_path: str) -> None:
     df[OUTPUT_COLS].to_csv(output_path, index=False)
 
     # Summary
-    high   = (df["risk_level"] == "High").sum()
-    medium = (df["risk_level"] == "Medium").sum()
-    low    = (df["risk_level"] == "Low").sum()
+    critical = (df["risk_level"] == "Critical").sum()
+    at_risk  = (df["risk_level"] == "At Risk").sum()
+    loyal    = (df["risk_level"] == "Loyal").sum()
 
     print()
     print("  ✓ Scoring complete!")
     print(f"  Total customers : {len(df)}")
-    print(f"  High risk       : {high}")
-    print(f"  Medium risk     : {medium}")
-    print(f"  Low risk        : {low}")
+    print(f"  Critical        : {critical}")
+    print(f"  At Risk         : {at_risk}")
+    print(f"  Loyal           : {loyal}")
     print(f"  Output file     : {output_path}")
     print()
     print("  Next step: Upload the CSV via")

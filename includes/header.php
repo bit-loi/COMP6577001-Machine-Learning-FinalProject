@@ -56,7 +56,7 @@
     </script>
 
     <!-- Lucide Icons -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.454.1/umd/lucide.min.js"></script>
+    <script src="<?php echo APPURL; ?>assets/js/lucide.min.js"></script>
     <script>
       // Init Lucide with retry and multiple events to ensure icons render
       function initLucide() {
@@ -482,7 +482,7 @@
                   <?php endif; ?>
                   
                   <div style="height:1px;background:#f0f0f0;margin:6px 12px;"></div>
-                  <div style="padding:4px 8px 2px;font-size:0.68rem;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:0.06em;">Akun Saya</div>
+                  <div style="padding:4px 8px 2px;font-size:0.68rem;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:0.06em;">My Account</div>
 
                   <a href="<?php echo APPURL; ?>account/wallet.php" style="display:flex;align-items:center;gap:12px;padding:11px 14px;margin:2px 8px;font-size:0.84rem;color:#333;text-decoration:none;border-radius:10px;transition:all .18s;border:1px solid transparent;" onmouseover="this.style.background='#FFF9F7';this.style.borderColor='#FECBA6';this.style.boxShadow='0 2px 10px rgba(238,77,45,0.1)'" onmouseout="this.style.background='';this.style.borderColor='transparent';this.style.boxShadow=''">
                     <span style="width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#ecfdf5,#d1fae5);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 6px rgba(5,150,105,0.15);">
@@ -490,7 +490,7 @@
                     </span>
                     <span style="flex:1;">
                       <span style="display:block;font-weight:600;color:#222;">Wallet & Topup</span>
-                      <span style="display:block;font-size:0.72rem;color:#999;margin-top:1px;">Saldo & isi ulang</span>
+                      <span style="display:block;font-size:0.72rem;color:#999;margin-top:1px;">Balance & top up</span>
                     </span>
                     <i data-lucide="chevron-right" style="width:14px;height:14px;color:#ccc;flex-shrink:0;"></i>
                   </a>
@@ -500,7 +500,7 @@
                     </span>
                     <span style="flex:1;">
                       <span style="display:block;font-weight:600;color:#222;">My Purchases</span>
-                      <span style="display:block;font-size:0.72rem;color:#999;margin-top:1px;">Riwayat pesanan</span>
+                      <span style="display:block;font-size:0.72rem;color:#999;margin-top:1px;">Order history</span>
                     </span>
                     <i data-lucide="chevron-right" style="width:14px;height:14px;color:#ccc;flex-shrink:0;"></i>
                   </a>
@@ -523,7 +523,7 @@
       <!-- Mobile Search Bar (slide down) -->
       <div id="mobile-search-bar">
         <form action="<?php echo APPURL; ?>categories/index.php" method="GET">
-          <input type="text" name="search" placeholder="Cari produk, merek, atau toko..." autocomplete="off" id="mobile-search-input">
+          <input type="text" name="search" placeholder="Search for products, brands, or shops..." autocomplete="off" id="mobile-search-input">
           <button type="submit" aria-label="Search">
             <i data-lucide="search" style="width:16px;height:16px;"></i>
           </button>

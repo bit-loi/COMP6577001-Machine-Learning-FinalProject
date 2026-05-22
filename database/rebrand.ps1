@@ -1,10 +1,10 @@
 $files = @(
-    "c:\xampp\htdocs\bookstore\admin\orders\index.php",
-    "c:\xampp\htdocs\bookstore\admin\customers\index.php",
-    "c:\xampp\htdocs\bookstore\admin\categories\index.php",
-    "c:\xampp\htdocs\bookstore\admin\categories\handler.php",
-    "c:\xampp\htdocs\bookstore\admin\simulation.php",
-    "c:\xampp\htdocs\bookstore\admin\includes\topnav.php"
+    "c:\xampp\htdocs\shopmart\admin\orders\index.php",
+    "c:\xampp\htdocs\shopmart\admin\customers\index.php",
+    "c:\xampp\htdocs\shopmart\admin\categories\index.php",
+    "c:\xampp\htdocs\shopmart\admin\categories\handler.php",
+    "c:\xampp\htdocs\shopmart\admin\simulation.php",
+    "c:\xampp\htdocs\shopmart\admin\includes\topnav.php"
 )
 
 foreach ($f in $files) {

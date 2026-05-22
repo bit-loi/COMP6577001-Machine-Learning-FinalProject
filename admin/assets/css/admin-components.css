@@ -1,0 +1,181 @@
+/**
+ * Admin Components — Shared CSS
+ * 
+ * Consolidated styles used across multiple admin pages.
+ * Avoids repeating the same inline <style> blocks per page.
+ */
+
+/* ─── Churn Module ─────────────────────────────────────────── */
+.risk-critical { background:#fef2f2; color:#dc2626; border:1px solid #fecaca; }
+.risk-at-risk  { background:#fefce8; color:#ca8a04; border:1px solid #fef08a; }
+.risk-loyal    { background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; }
+
+.pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
+
+.action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    border-radius: 7px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    color: #475569;
+    cursor: pointer;
+    transition: all .15s;
+}
+.action-btn:hover { border-color: #EE4D2D; color: #EE4D2D; background: #FFF4ED; }
+.action-btn.done  { background: #f0fdf4; color: #16a34a; border-color: #bbf7d0; pointer-events: none; }
+
+.stat-mini {
+    background: #fff;
+    border: 1px solid #f1f5f9;
+    border-radius: 14px;
+    padding: 18px 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.stat-mini-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.filter-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 16px;
+    border-radius: 8px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    color: #64748b;
+    cursor: pointer;
+    transition: all .15s;
+    text-decoration: none;
+}
+.filter-btn:hover,
+.filter-btn.active { background: #EE4D2D; color: #fff; border-color: #EE4D2D; }
+
+/* ─── Fraud / Prediction Forms ─────────────────────────────── */
+.input-group   { margin-bottom: 20px; }
+.input-label   { display: block; font-size: 0.78rem; font-weight: 700; color: #475569; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em; }
+.input-field   { width: 100%; padding: 11px 14px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: 0.875rem; font-family: 'Inter', sans-serif; color: #0f172a; outline: none; transition: border-color .2s, box-shadow .2s; background: #fafafa; }
+.input-field:focus { border-color: #EE4D2D; box-shadow: 0 0 0 3px rgba(238,77,45,0.1); background: #fff; }
+.input-hint    { font-size: 0.7rem; color: #94a3b8; margin-top: 4px; }
+
+.submit-btn {
+    width: 100%;
+    padding: 14px;
+    background: #EE4D2D;
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    transition: background .2s, transform .15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+.submit-btn:hover    { background: #C53D20; }
+.submit-btn:active   { transform: scale(0.98); }
+.submit-btn:disabled { background: #cbd5e1; cursor: not-allowed; }
+
+/* ─── Result Boxes ─────────────────────────────────────────── */
+.result-box        { display: none; border-radius: 16px; padding: 28px; margin-top: 24px; }
+.result-normal     { background: linear-gradient(135deg, #f0fdf4, #dcfce7); border: 1.5px solid #86efac; }
+.result-fraud      { background: linear-gradient(135deg, #fef2f2, #fee2e2); border: 1.5px solid #fca5a5; }
+.result-title      { font-size: 1.5rem; font-weight: 900; margin-bottom: 8px; }
+.result-title.normal { color: #15803d; }
+.result-title.fraud  { color: #dc2626; }
+
+.metric-row  { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 20px; }
+.metric-card { background: rgba(255,255,255,0.7); border-radius: 12px; padding: 16px; text-align: center; }
+.metric-value { font-size: 1.5rem; font-weight: 800; color: #0f172a; }
+.metric-label { font-size: 0.7rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 4px; }
+
+.score-bar-wrap { height: 10px; background: #e2e8f0; border-radius: 5px; overflow: hidden; margin-top: 6px; }
+.score-bar      { height: 100%; border-radius: 5px; transition: width 1s ease; }
+
+/* ─── Churn Prediction Single ──────────────────────────────── */
+.result-hidden  { display: none; }
+.pill-risk      { display: inline-flex; align-items: center; gap: 6px; padding: 6px 16px; border-radius: 20px; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; }
+.risk-high      { background: #fef2f2; color: #dc2626; border: 1.5px solid #fecaca; }
+.risk-medium    { background: #fefce8; color: #ca8a04; border: 1.5px solid #fde047; }
+.risk-low       { background: #f0fdf4; color: #15803d; border: 1.5px solid #86efac; }
+
+.prob-bar-wrap  { height: 12px; background: #f1f5f9; border-radius: 6px; overflow: hidden; margin-top: 8px; }
+.prob-bar       { height: 100%; border-radius: 6px; transition: width 1.2s cubic-bezier(.34,1.56,.64,1); }
+
+.feature-card   { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px; text-align: center; }
+.feature-val    { font-size: 1.25rem; font-weight: 800; color: #0f172a; }
+.feature-lbl    { font-size: 0.68rem; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 4px; }
+
+/* ─── Dashboard Stat Cards ─────────────────────────────────── */
+.stat-card {
+    background: #fff;
+    border: 1px solid #f1f5f9;
+    border-radius: 16px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
+}
+.stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.stat-info  { flex: 1; }
+.stat-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; margin-bottom: 4px; }
+.stat-number { font-size: 1.25rem; font-weight: 800; color: #0f172a; line-height: 1; }
+
+/* ─── Toast Notification ───────────────────────────────────── */
+.toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    padding: 12px 20px;
+    border-radius: 10px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #fff;
+    background: #16a34a;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+    transform: translateY(80px);
+    opacity: 0;
+    transition: all .3s;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}

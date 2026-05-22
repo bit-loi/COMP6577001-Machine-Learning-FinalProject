@@ -123,13 +123,13 @@ def predict_churn():
         
         # Risk logic
         if proba >= 0.75:
-            risk_level = "High"
+            risk_level = "Critical"
             action = "Send urgent retention offer"
         elif proba >= 0.45:
-            risk_level = "Medium"
+            risk_level = "At Risk"
             action = "Send personalized promo"
         else:
-            risk_level = "Low"
+            risk_level = "Loyal"
             action = "Maintain normal engagement"
 
         return jsonify({

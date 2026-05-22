@@ -54,13 +54,13 @@ CREATE TABLE IF NOT EXISTS retention_actions (
 // -------------------------------------------------------
 function calcRisk(float $prob, float $revenue): array {
     if ($prob >= 0.75 && $revenue >= 100) {
-        return ['High', 'Send loyalty voucher'];
+        return ['Critical', 'Send urgent retention offer'];
     } elseif ($prob >= 0.75) {
-        return ['High', 'Send reactivation email'];
-    } elseif ($prob >= 0.50) {
-        return ['Medium', 'Send product recommendation'];
+        return ['Critical', 'Send reactivation email'];
+    } elseif ($prob >= 0.45) {
+        return ['At Risk', 'Send personalized promo'];
     } else {
-        return ['Low', 'No immediate action'];
+        return ['Loyal', 'Maintain normal engagement'];
     }
 }
 

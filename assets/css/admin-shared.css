@@ -1,0 +1,114 @@
+/* ==========================================================================
+   SHARED ADMIN STYLES - shopmart
+   Centralized CSS for admin forms, intelligence panels, and cards.
+   ========================================================================== */
+
+.table-card {
+    background: #fff;
+    border: 1px solid #f1f5f9;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
+}
+
+.input-group {
+    margin-bottom: 20px;
+}
+
+.input-label {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #475569;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.input-field {
+    width: 100%;
+    padding: 11px 14px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 0.875rem;
+    font-family: 'Inter', sans-serif;
+    color: #0f172a;
+    outline: none;
+    transition: border-color .2s, box-shadow .2s;
+    background: #fafafa;
+}
+
+.input-field:focus {
+    border-color: #EE4D2D;
+    box-shadow: 0 0 0 3px rgba(238, 77, 45, 0.1);
+    background: #fff;
+}
+
+.input-hint {
+    font-size: 0.7rem;
+    color: #94a3b8;
+    margin-top: 4px;
+}
+
+.submit-btn {
+    width: 100%;
+    padding: 14px;
+    background: #EE4D2D;
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    transition: background .2s, transform .15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.submit-btn:hover {
+    background: #C53D20;
+}
+
+.submit-btn:active {
+    transform: scale(0.98);
+}
+
+.submit-btn:disabled {
+    background: #cbd5e1;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.guide-card {
+    background: #fafafa;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 20px;
+}
+
+.guide-title {
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #475569;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.guide-item {
+    font-size: 0.78rem;
+    color: #64748b;
+    margin-bottom: 8px;
+    line-height: 1.4;
+}
+
+.guide-item strong {
+    color: #334155;
+}

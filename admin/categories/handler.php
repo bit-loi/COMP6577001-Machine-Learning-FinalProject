@@ -11,6 +11,14 @@ require_once '../../config/config.php';
 
 $action = $_POST['action'] ?? '';
 
+// CSRF validation for mutating actions
+if (in_array($action, ['create', 'update', 'delete'])) {
+    if (empty($_POST['csrf_token']) || !isset($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+        echo json_encode(['success' => false, 'message' => 'Invalid security token. Please refresh the page.']);
+        exit();
+    }
+}
+
 switch ($action) {
 
     // ── CREATE ────────────────────────────────────────────────────────────────

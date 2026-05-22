@@ -18,7 +18,16 @@ $tax = round($subtotal * 0.1, 2);
 $shipping = $subtotal >= 50 ? 0 : 5.99;
 $total = $subtotal + $tax + $shipping;
 
+// Generate CSRF token
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $cartItems) {
+    // Validate CSRF token
+    if (empty($_POST['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+        $errorMsg = 'Invalid security token. Please refresh the page and try again.';
+    } else {
     try {
         $userId = $_SESSION['user_id'];
         $orderNumber = 'SM-' . strtoupper(uniqid());
@@ -68,6 +77,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $cartItems) {
     } catch (PDOException $e) {
         $errorMsg = "Order failed. Please try again.";
     }
+    } // end CSRF check
 }
 ?>
 <?php include '../includes/header.php'; ?>
@@ -97,11 +107,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $cartItems) {
             <div style="padding: 16px; background: #FEE2E2; color: #DC2626; border-radius: 10px; margin-bottom: 20px;"><?php echo $errorMsg; ?></div>
         <?php endif; ?>
         <form method="POST">
+            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
             <div style="display: grid; grid-template-columns: 1fr 380px; gap: 24px; align-items: start;">
                 <div>
                     <!-- Shipping -->
                     <div style="background: #fff; border-radius: 16px; border: 1px solid #eee; padding: 24px; margin-bottom: 20px;">
-                        <h3 style="font-size: 1rem; font-weight: 700; margin: 0 0 20px;">Shipping Address</h3>
+                        <h3 style="font-size: 1rem; font-weight: 700; margin: 0 0 20px; display: flex; align-items: center; gap: 8px;">
+                            <i data-lucide="map-pin" style="width: 18px; height: 18px; color: #FF6B35;"></i> Shipping Address
+                        </h3>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
                             <div><label style="font-size: 0.8rem; font-weight: 600; color: #555; display: block; margin-bottom: 6px;">First Name</label><input type="text" name="first_name" required style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; font-size: 0.9rem; outline: none;"></div>
                             <div><label style="font-size: 0.8rem; font-weight: 600; color: #555; display: block; margin-bottom: 6px;">Last Name</label><input type="text" name="last_name" required style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; font-size: 0.9rem; outline: none;"></div>
@@ -115,7 +128,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $cartItems) {
                     </div>
                     <!-- Payment -->
                     <div style="background: #fff; border-radius: 16px; border: 1px solid #eee; padding: 24px;">
-                        <h3 style="font-size: 1rem; font-weight: 700; margin: 0 0 20px;">Payment Method</h3>
+                        <h3 style="font-size: 1rem; font-weight: 700; margin: 0 0 20px; display: flex; align-items: center; gap: 8px;">
+                            <i data-lucide="credit-card" style="width: 18px; height: 18px; color: #FF6B35;"></i> Payment Method
+                        </h3>
                         <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
                             <label style="display: flex; align-items: center; gap: 8px; padding: 16px; border: 2px solid #FF6B35; border-radius: 12px; cursor: pointer; background: #FFF4ED;">
                                 <input type="radio" name="payment" value="wallet" checked> 
@@ -145,7 +160,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $cartItems) {
 
                 <!-- Summary -->
                 <div style="background: #fff; border-radius: 16px; border: 1px solid #eee; padding: 24px; position: sticky; top: 100px;">
-                    <h3 style="font-size: 1rem; font-weight: 700; margin: 0 0 20px;">Order Summary</h3>
+                    <h3 style="font-size: 1rem; font-weight: 700; margin: 0 0 20px; display: flex; align-items: center; gap: 8px;">
+                        <i data-lucide="receipt" style="width: 18px; height: 18px; color: #FF6B35;"></i> Order Summary
+                    </h3>
                     <?php foreach($cartItems as $item):
                         $itemPrice = ($item->discount_price && $item->discount_price > 0) ? $item->discount_price : $item->price;
                     ?>

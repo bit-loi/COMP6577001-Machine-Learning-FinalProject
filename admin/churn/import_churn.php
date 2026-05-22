@@ -9,10 +9,10 @@ if (!isset($_SESSION['is_admin']) || $_SESSION['is_admin'] != 1) {
 // Helpers
 // -------------------------------------------------------
 function calcRisk(float $prob, float $revenue): array {
-    if ($prob >= 0.75 && $revenue >= 100) return ['High', 'Send loyalty voucher'];
-    elseif ($prob >= 0.75)               return ['High', 'Send reactivation email'];
-    elseif ($prob >= 0.50)               return ['Medium', 'Send product recommendation'];
-    else                                  return ['Low', 'No immediate action'];
+    if ($prob >= 0.75 && $revenue >= 100) return ['Critical', 'Send urgent retention offer'];
+    elseif ($prob >= 0.75)               return ['Critical', 'Send reactivation email'];
+    elseif ($prob >= 0.45)               return ['At Risk', 'Send personalized promo'];
+    else                                  return ['Loyal', 'Maintain normal engagement'];
 }
 
 // -------------------------------------------------------
@@ -179,15 +179,15 @@ predicted_churn</pre>
             <div style="display:flex;flex-direction:column;gap:8px;font-size:0.78rem;">
                 <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:#fef2f2;border-radius:8px;">
                     <span style="width:10px;height:10px;background:#ef4444;border-radius:50%;flex-shrink:0;"></span>
-                    <div><strong>High</strong> (≥ 0.75) — Send voucher or reactivation email</div>
+                    <div><strong>Critical</strong> (≥ 0.75) — Send urgent retention offer</div>
                 </div>
                 <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:#fefce8;border-radius:8px;">
                     <span style="width:10px;height:10px;background:#eab308;border-radius:50%;flex-shrink:0;"></span>
-                    <div><strong>Medium</strong> (0.50 – 0.74) — Send product recommendation</div>
+                    <div><strong>At Risk</strong> (0.45 – 0.74) — Send personalized promo</div>
                 </div>
                 <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:#f0fdf4;border-radius:8px;">
                     <span style="width:10px;height:10px;background:#22c55e;border-radius:50%;flex-shrink:0;"></span>
-                    <div><strong>Low</strong> (< 0.50) — No immediate action</div>
+                    <div><strong>Loyal</strong> (< 0.45) — Maintain normal engagement</div>
                 </div>
             </div>
         </div>

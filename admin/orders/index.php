@@ -63,7 +63,9 @@ require_once '../includes/header.php';
         <!-- Table Box -->
         <div class="table-card mt-6">
             <div class="flex justify-between items-center mb-6">
-                <h5 class="text-sm font-semibold tracking-wide text-gray-800 uppercase">Order History</h5>
+                <h5 class="text-sm font-semibold tracking-wide text-gray-800 uppercase flex items-center gap-2">
+                    <i data-lucide="history" style="width: 16px; height: 16px; color: #EE4D2D;"></i> Order History
+                </h5>
                 <input type="text" class="bg-gray-50 border border-gray-200 text-gray-800 rounded-lg text-xs px-3 py-2 w-64 focus:outline-none focus:border-shopmart-500 transition-colors" placeholder="Search order ID or customer...">
             </div>
 

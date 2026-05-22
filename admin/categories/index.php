@@ -8,6 +8,11 @@ if (!isset($_SESSION['is_admin']) || $_SESSION['is_admin'] != 1) {
 
 require_once '../../config/config.php';
 
+// Generate CSRF token for category CRUD
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
 // Fetch all categories
 try {
     $stmt = $conn->prepare("SELECT c.*, COUNT(p.id) as product_count 
@@ -21,6 +26,17 @@ try {
     error_log("Error: " . $e->getMessage());
     $categories = [];
 }
+
+$catIcons = [
+  'electronics'      => ['icon'=>'smartphone', 'bg'=>'#EFF6FF', 'color'=>'#1D4ED8', 'border'=>'#BFDBFE'],
+  'fashion'          => ['icon'=>'shirt',      'bg'=>'#FDF2F8', 'color'=>'#9D174D', 'border'=>'#FBCFE8'],
+  'home-living'      => ['icon'=>'sofa',       'bg'=>'#F0FDF4', 'color'=>'#166534', 'border'=>'#BBF7D0'],
+  'beauty'           => ['icon'=>'sparkles',   'bg'=>'#FFF1F2', 'color'=>'#BE123C', 'border'=>'#FECACA'],
+  'sports'           => ['icon'=>'dumbbell',   'bg'=>'#FFF7ED', 'color'=>'#C2410C', 'border'=>'#FED7AA'],
+  'books-stationery' => ['icon'=>'book-open',  'bg'=>'#FEFCE8', 'color'=>'#92400E', 'border'=>'#FEF08A'],
+  'groceries'        => ['icon'=>'apple',      'bg'=>'#F0FDF4', 'color'=>'#15803D', 'border'=>'#BBF7D0'],
+  'toys-games'       => ['icon'=>'gamepad-2',  'bg'=>'#F5F3FF', 'color'=>'#6D28D9', 'border'=>'#DDD6FE'],
+];
 ?>
 <?php
 $pageTitle = 'Categories Management';
@@ -34,11 +50,14 @@ require_once '../includes/header.php';
         <!-- Categories Grid -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             <?php if($categories): ?>
-                <?php foreach($categories as $category): ?>
+                <?php foreach($categories as $category): 
+                    $slug = $category->slug ?? '';
+                    $style = $catIcons[$slug] ?? ['icon'=>'package', 'bg'=>'#FFF4ED', 'color'=>'#EE4D2D', 'border'=>'#FFD9C6'];
+                ?>
                     <div class="bg-white border border-gray-200 rounded-xl p-6 transition-all hover:shadow-lg flex flex-col h-full">
                         <div class="flex justify-between items-start mb-2 border-b border-gray-100 pb-5">
-                            <div class="w-12 h-12 rounded-xl bg-[#FFF4ED] border border-[#FFD9C6] flex items-center justify-center text-[#EE4D2D] mb-6 transition-transform">
-                                <i data-lucide="grid-3x3" style="width: 24px; height: 24px;"></i>
+                            <div class="w-12 h-12 rounded-xl flex items-center justify-center mb-6 transition-transform" style="background: <?php echo $style['bg']; ?>; border: 1px solid <?php echo $style['border']; ?>; color: <?php echo $style['color']; ?>;">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-atom"><circle cx="12" cy="12" r="1"/><ellipse cx="12" cy="12" rx="3" ry="10"/><ellipse cx="12" cy="12" rx="3" ry="10" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="3" ry="10" transform="rotate(120 12 12)"/></svg>
                             </div>
                             <div class="flex gap-2">
                                 <a href="#" class="action-icon btn-edit" data-id="<?php echo $category->id; ?>" title="Edit">
@@ -112,6 +131,7 @@ require_once '../includes/header.php';
 </style>
 <script>
     const HANDLER = '<?php echo APPURL; ?>admin/categories/handler.php';
+    const CSRF_TOKEN = '<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>';
     const swalOpts = { background:'#fff', color:'#333', customClass:{popup:'swal-border'} };
 
     // ── Nav active ───────────────────────────────────────────────────────────
@@ -161,7 +181,7 @@ require_once '../includes/header.php';
         if (!name) { showError('Category name is required.'); return; }
 
         const action = id ? 'update' : 'create';
-        const body   = new URLSearchParams({action, name, description: desc});
+        const body   = new URLSearchParams({action, name, description: desc, csrf_token: CSRF_TOKEN});
         if (id) body.append('id', id);
 
         const btn = document.getElementById('modalSubmitBtn');
@@ -204,7 +224,7 @@ require_once '../includes/header.php';
                 cancelButtonText:  '<span style="color:rgba(255,255,255,0.7);font-family:\'Inter\',sans-serif;">CANCEL</span>'
             }).then(result => {
                 if (!result.isConfirmed) return;
-                fetch(HANDLER, { method:'POST', body: new URLSearchParams({action:'delete', id}) })
+                fetch(HANDLER, { method:'POST', body: new URLSearchParams({action:'delete', id, csrf_token: CSRF_TOKEN}) })
                     .then(r => r.json())
                     .then(res => {
                         if (res.success) {
