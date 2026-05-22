@@ -17,7 +17,7 @@
             </div>
             <div>
                 <div style="font-size:0.95rem;font-weight:800;color:#0f172a;">Manual Fraud Check</div>
-                <div style="font-size:0.75rem;color:#94a3b8;">Masukkan detail transaksi untuk dicek oleh model Isolation Forest</div>
+                <div style="font-size:0.75rem;color:#94a3b8;">Enter transaction details to be verified by the Isolation Forest model</div>
             </div>
         </div>
 
@@ -26,7 +26,7 @@
                 <div class="input-group">
                     <label class="input-label">Transaction Amount ($) *</label>
                     <input type="number" class="input-field" id="inp-amount" placeholder="e.g. 150.00" step="0.01" min="0" required>
-                    <div class="input-hint">Jumlah nominal transaksi</div>
+                    <div class="input-hint">Total transaction amount</div>
                 </div>
                 <div class="input-group">
                     <label class="input-label">Card Type *</label>
@@ -84,9 +84,9 @@
             <div style="margin-bottom:20px;">
                 <div style="font-size:0.72rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">Quick Presets</div>
                 <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                    <button type="button" onclick="loadPreset('normal')" style="padding:6px 14px;background:#f0fdf4;color:#15803d;border:1.5px solid #86efac;border-radius:8px;font-size:0.75rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;"><i data-lucide="check-circle" style="width:14px;height:14px;"></i> Normal Transaction ($80)</button>
-                    <button type="button" onclick="loadPreset('suspicious')" style="padding:6px 14px;background:#fefce8;color:#854d0e;border:1.5px solid #fde047;border-radius:8px;font-size:0.75rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;"><i data-lucide="alert-triangle" style="width:14px;height:14px;"></i> Suspicious ($2,500)</button>
-                    <button type="button" onclick="loadPreset('fraud')" style="padding:6px 14px;background:#fef2f2;color:#dc2626;border:1.5px solid #fca5a5;border-radius:8px;font-size:0.75rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;"><i data-lucide="x-circle" style="width:14px;height:14px;"></i> High Risk ($15,000)</button>
+                    <button type="button" onclick="loadPreset('normal')" style="padding:6px 14px;background:#f0fdf4;color:#15803d;border:1.5px solid #86efac;border-radius:8px;font-size:0.75rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;">Normal Transaction ($80)</button>
+                    <button type="button" onclick="loadPreset('suspicious')" style="padding:6px 14px;background:#fefce8;color:#854d0e;border:1.5px solid #fde047;border-radius:8px;font-size:0.75rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;">Suspicious ($2,500)</button>
+                    <button type="button" onclick="loadPreset('fraud')" style="padding:6px 14px;background:#fef2f2;color:#dc2626;border:1.5px solid #fca5a5;border-radius:8px;font-size:0.75rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;">High Risk ($15,000)</button>
                 </div>
             </div>
 
@@ -130,10 +130,10 @@
                 <i data-lucide="info" style="width:16px;height:16px;color:#3b82f6;"></i> How It Works
             </div>
             <div style="font-size:0.8rem;color:#475569;line-height:1.8;">
-                <div style="display:flex;gap:10px;margin-bottom:10px;"><span style="font-weight:800;color:#EE4D2D;min-width:20px;">1</span> Input detail transaksi di form kiri</div>
-                <div style="display:flex;gap:10px;margin-bottom:10px;"><span style="font-weight:800;color:#EE4D2D;min-width:20px;">2</span> Data dikirim to <code style="background:#f1f5f9;padding:1px 5px;border-radius:4px;">Flask API /predict</code></div>
-                <div style="display:flex;gap:10px;margin-bottom:10px;"><span style="font-weight:800;color:#EE4D2D;min-width:20px;">3</span> Model Isolation Forest memproses 224 fitur</div>
-                <div style="display:flex;gap:10px;"><span style="font-weight:800;color:#EE4D2D;min-width:20px;">4</span> Hasil ditampilkan: Normal atau Anomali</div>
+                <div style="display:flex;gap:10px;margin-bottom:10px;"><span style="font-weight:800;color:#EE4D2D;min-width:20px;">1</span> Input transaction details in the left form</div>
+                <div style="display:flex;gap:10px;margin-bottom:10px;"><span style="font-weight:800;color:#EE4D2D;min-width:20px;">2</span> Data is sent to the <code style="background:#f1f5f9;padding:1px 5px;border-radius:4px;">Flask API /predict</code></div>
+                <div style="display:flex;gap:10px;margin-bottom:10px;"><span style="font-weight:800;color:#EE4D2D;min-width:20px;">3</span> Isolation Forest model processes 224 features</div>
+                <div style="display:flex;gap:10px;"><span style="font-weight:800;color:#EE4D2D;min-width:20px;">4</span> Results are displayed: Normal or Anomaly</div>
             </div>
         </div>
 
@@ -141,16 +141,13 @@
             <div style="font-size:0.85rem;font-weight:700;color:#0f172a;margin-bottom:14px;">Score Interpretation</div>
             <div style="display:flex;flex-direction:column;gap:10px;font-size:0.78rem;">
                 <div style="display:flex;align-items:center;gap:10px;padding:10px;background:#f0fdf4;border-radius:8px;border:1px solid #bbf7d0;">
-                    <span style="font-size:1.1rem;">✅</span>
-                    <div><strong>Normal Transaction</strong><br><span style="color:#64748b;">Model memprediksikan transaksi sah</span></div>
+                    <div><strong>Normal Transaction</strong><br><span style="color:#64748b;">Model predicts a legitimate transaction</span></div>
                 </div>
                 <div style="display:flex;align-items:center;gap:10px;padding:10px;background:#fefce8;border-radius:8px;border:1px solid #fde047;">
-                    <span style="font-size:1.1rem;">⚠️</span>
-                    <div><strong>Borderline</strong><br><span style="color:#64748b;">Perlu verifikasi tambahan</span></div>
+                    <div><strong>Borderline</strong><br><span style="color:#64748b;">Requires additional verification</span></div>
                 </div>
                 <div style="display:flex;align-items:center;gap:10px;padding:10px;background:#fef2f2;border-radius:8px;border:1px solid #fecaca;">
-                    <span style="font-size:1.1rem;">🚨</span>
-                    <div><strong>Anomaly Detected</strong><br><span style="color:#64748b;">Pola mencurigakan terdeteksi oleh Isolation Forest</span></div>
+                    <div><strong>Anomaly Detected</strong><br><span style="color:#64748b;">Suspicious pattern detected by Isolation Forest</span></div>
                 </div>
             </div>
         </div>

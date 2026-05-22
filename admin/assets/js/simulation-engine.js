@@ -62,7 +62,7 @@
             const score = data.anomaly_score.toFixed(4);
             const isFraud = data.is_anomaly === true;
 
-            if (isFraud) { anomalyCount++; logTerminal(`TRX_ID: ${trxId} | AMT: $${parseFloat(amt).toFixed(2)} | SCORE: ${score} -> ⚠ ANOMALY DETECTED`, 'error'); document.getElementById('stat-anomalies').textContent = anomalyCount; }
+            if (isFraud) { anomalyCount++; logTerminal(`TRX_ID: ${trxId} | AMT: $${parseFloat(amt).toFixed(2)} | SCORE: ${score} -> WARNING: ANOMALY DETECTED`, 'error'); document.getElementById('stat-anomalies').textContent = anomalyCount; }
             else { logTerminal(`TRX_ID: ${trxId} | AMT: $${parseFloat(amt).toFixed(2)} | SCORE: ${score} -> NORMAL`, 'info'); }
 
             document.getElementById('stat-count').textContent = trxCount;

@@ -24,7 +24,7 @@
             </div>
             <div>
                 <div style="font-size:0.95rem;font-weight:800;color:#0f172a;">Predict Customer Churn</div>
-                <div style="font-size:0.75rem;color:#94a3b8;">Masukkan data customer untuk memprediksi kemungkinan churn</div>
+                <div style="font-size:0.75rem;color:#94a3b8;">Enter customer data to predict customer churn probability</div>
             </div>
         </div>
 
@@ -34,31 +34,31 @@
                 <div style="grid-column:1/-1;">
                     <label class="input-label">Customer ID *</label>
                     <input type="text" class="input-field" id="inp-custid" placeholder="e.g. C123456" required>
-                    <div class="input-hint">ID unik customer yang ingin dicek</div>
+                    <div class="input-hint">Unique customer ID to check</div>
                 </div>
 
                 <div>
                     <label class="input-label">Orders (Last Window) *</label>
                     <input type="number" class="input-field" id="inp-orders" placeholder="e.g. 5" min="0" required>
-                    <div class="input-hint">Jumlah order dalam periode terakhir</div>
+                    <div class="input-hint">Total orders in the last observation window</div>
                 </div>
 
                 <div>
                     <label class="input-label">Revenue (Last Window) *</label>
                     <input type="number" class="input-field" id="inp-revenue" placeholder="e.g. 250.50" step="0.01" min="0" required>
-                    <div class="input-hint">Total pendapatan dari customer ini ($)</div>
+                    <div class="input-hint">Total revenue generated from this customer ($)</div>
                 </div>
 
                 <div>
                     <label class="input-label">Recency Days *</label>
                     <input type="number" class="input-field" id="inp-recency" placeholder="e.g. 30" min="0" required>
-                    <div class="input-hint">Berapa hari sejak transaksi terakhir</div>
+                    <div class="input-hint">Number of days since the last purchase</div>
                 </div>
 
                 <div>
                     <label class="input-label">Customer Age (Days) *</label>
                     <input type="number" class="input-field" id="inp-age" placeholder="e.g. 365" min="0" required>
-                    <div class="input-hint">Berapa hari sejak customer pertama daftar</div>
+                    <div class="input-hint">Number of days since the customer registered</div>
                 </div>
 
                 <div>
@@ -147,10 +147,10 @@
                 <i data-lucide="info" style="width:16px;height:16px;color:#3b82f6;"></i> Feature Guide
             </div>
             <div style="display:flex;flex-direction:column;gap:12px;font-size:0.78rem;color:#475569;">
-                <div><strong>Orders Last Window:</strong> Total jumlah order dalam window waktu tertentu (misal 3 bulan). Semakin sedikit = lebih berisiko.</div>
-                <div><strong>Revenue Last Window:</strong> Total nilai belanja. Customer dengan revenue rendah cenderung tidak setia.</div>
-                <div><strong>Recency Days:</strong> Semakin banyak hari sejak terakhir belanja = semakin tinggi risiko churn.</div>
-                <div><strong>Customer Age Days:</strong> Semakin lama customer bergabung, biasanya semakin loyal.</div>
+                <div><strong>Orders Last Window:</strong> Total number of orders in the observation window. Fewer orders indicate higher risk.</div>
+                <div><strong>Revenue Last Window:</strong> Total purchase value. Lower revenue customers are more likely to churn.</div>
+                <div><strong>Recency Days:</strong> Number of days since last purchase. Higher recency indicates higher risk of churn.</div>
+                <div><strong>Customer Age Days:</strong> Total duration of customer relationship. Longer-term customers are usually more loyal.</div>
             </div>
         </div>
 
@@ -159,15 +159,15 @@
             <div style="display:flex;flex-direction:column;gap:8px;font-size:0.78rem;">
                 <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:#fef2f2;border-radius:8px;">
                     <span style="width:10px;height:10px;background:#ef4444;border-radius:50%;flex-shrink:0;"></span>
-                    <div><strong>Critical</strong> — Probabilitas ≥ 75%</div>
+                    <div><strong>Critical</strong> — Probability >= 75%</div>
                 </div>
                 <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:#fefce8;border-radius:8px;">
                     <span style="width:10px;height:10px;background:#eab308;border-radius:50%;flex-shrink:0;"></span>
-                    <div><strong>At Risk</strong> — Probabilitas 45% – 74%</div>
+                    <div><strong>At Risk</strong> — Probability 45% - 74%</div>
                 </div>
                 <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:#f0fdf4;border-radius:8px;">
                     <span style="width:10px;height:10px;background:#22c55e;border-radius:50%;flex-shrink:0;"></span>
-                    <div><strong>Loyal</strong> — Probabilitas &lt; 45%</div>
+                    <div><strong>Loyal</strong> — Probability &lt; 45%</div>
                 </div>
             </div>
         </div>
@@ -256,7 +256,7 @@ document.getElementById('churn-form').addEventListener('submit', async function(
         document.getElementById('churn-result').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
     } catch(err) {
-        alert('❌ Tidak dapat terhubung ke Flask API (localhost:5000). Pastikan main.py sedang berjalan!\n\nError: ' + err.message);
+        alert('Could not connect to Flask API (localhost:5000). Make sure main.py is running!\n\nError: ' + err.message);
     }
 
     btn.disabled = false;

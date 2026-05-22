@@ -28,11 +28,11 @@
                 btn.classList.add('done');
                 btn.style.opacity = '1';
                 btn.disabled = false;
-                showToast('✓ ' + data.message);
+                showToast('Success: ' + data.message);
             } else {
                 btn.disabled = false;
                 btn.style.opacity = '1';
-                showToast('⚠ ' + data.message, '#ef4444');
+                showToast('Warning: ' + data.message, '#ef4444');
             }
         })
         .catch(() => {

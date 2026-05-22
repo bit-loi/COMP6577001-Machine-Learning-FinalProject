@@ -63,20 +63,20 @@
 
             box.className = 'result-box ' + (isFraud ? 'result-fraud' : 'result-normal');
             box.style.display = 'block';
-            document.getElementById('result-icon').textContent = isFraud ? '🚨' : '✅';
+            document.getElementById('result-icon').textContent = isFraud ? 'Anomaly' : 'Legitimate';
             document.getElementById('result-title').textContent = isFraud ? 'ANOMALY DETECTED' : 'NORMAL TRANSACTION';
             document.getElementById('result-title').className = 'result-title ' + (isFraud ? 'fraud' : 'normal');
             document.getElementById('result-subtitle').textContent = isFraud
-                ? 'Pola transaksi ini mencurigakan menurut model Isolation Forest.'
-                : 'Transaksi ini terlihat normal dan aman.';
+                ? 'This transaction pattern is suspicious according to the Isolation Forest model.'
+                : 'This transaction appears normal and safe.';
             document.getElementById('m-score').textContent = score;
-            document.getElementById('m-verdict').textContent = isFraud ? '⚠ Fraud' : '✓ Safe';
+            document.getElementById('m-verdict').textContent = isFraud ? 'Fraud' : 'Safe';
             document.getElementById('m-action').textContent = isFraud ? 'Block' : 'Allow';
             document.getElementById('score-bar').style.width = scorePercent + '%';
             document.getElementById('score-bar').style.background = isFraud ? '#ef4444' : '#22c55e';
             box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         } catch (err) {
-            alert('❌ Tidak dapat terhubung ke Flask API. Pastikan main.py sedang berjalan!');
+            alert('Could not connect to Flask API. Make sure main.py is running!');
         }
 
         btn.disabled = false;
