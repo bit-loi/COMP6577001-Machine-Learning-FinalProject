@@ -99,7 +99,7 @@
         <!-- Result -->
         <div id="result-box" class="result-box">
             <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
-                <div id="result-icon" style="width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.5rem;"></div>
+                <div id="result-icon" style="width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;"></div>
                 <div>
                     <div id="result-title" class="result-title"></div>
                     <div id="result-subtitle" style="font-size:0.82rem;color:#475569;"></div>
@@ -169,4 +169,4 @@ window.fraudConfig = {
     apiUrl: 'http://localhost:5000/predict'
 };
 </script>
-<script src="<?php echo APPURL; ?>admin/assets/js/fraud-form.js"></script>
+<script src="<?php echo APPURL; ?>admin/assets/js/fraud-form.js?v=<?php echo time(); ?>"></script>

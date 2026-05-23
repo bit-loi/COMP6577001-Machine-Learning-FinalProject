@@ -12,7 +12,7 @@ Usage:
     python churn_batch_scoring.py --input customer_features.csv --output my_scores.csv
 
 Output:
-    churn_scores.csv  →  upload this via admin/churn/import_churn.php
+    churn_scores.csv  ->  upload this via admin/churn/import_churn.php
 """
 
 import argparse
@@ -83,26 +83,18 @@ def run_batch_scoring(input_path: str, output_path: str) -> None:
         print("        Run your training notebook first to generate churn_model.joblib")
         sys.exit(1)
 
-    print(f"[1/5] Loading model from: {MODEL_PATH}")
+    print(f"[1/4] Loading model from: {MODEL_PATH}")
     model = joblib.load(MODEL_PATH)
 
-    # 2. Load scaler (optional — skip if not used during training)
-    scaler = None
-    if os.path.exists(SCALER_PATH):
-        print(f"[2/5] Loading scaler from: {SCALER_PATH}")
-        scaler = joblib.load(SCALER_PATH)
-    else:
-        print("[2/5] No scaler.joblib found — skipping feature scaling")
-
-    # 3. Load customer features
+    # 2. Load customer features
     if not os.path.exists(input_path):
         print(f"[ERROR] Input file not found: {input_path}")
         print("        Generate customer_features.csv from your transaction database first.")
         sys.exit(1)
 
-    print(f"[3/5] Loading customer data from: {input_path}")
+    print(f"[2/4] Loading customer data from: {input_path}")
     df = pd.read_csv(input_path)
-    print(f"      → {len(df)} customers loaded")
+    print(f"      -> {len(df)} customers loaded")
 
     # Validate required columns
     missing = [c for c in FEATURE_COLS if c not in df.columns]
@@ -110,16 +102,26 @@ def run_batch_scoring(input_path: str, output_path: str) -> None:
         print(f"[ERROR] Missing columns in input CSV: {missing}")
         sys.exit(1)
 
-    # 4. Predict churn probability
-    print("[4/5] Running churn prediction...")
-    X = df[FEATURE_COLS].copy()
+    # 3. Predict churn probability
+    print("[3/4] Running churn prediction...")
+    
+    # We construct a full DataFrame containing all 50 features expected by the pipeline model
+    model_features = list(model.feature_names_in_)
+    X_full = pd.DataFrame(index=df.index)
+    
+    for col in model_features:
+        if col in df.columns:
+            X_full[col] = df[col]
+        else:
+            if col == 'country':
+                X_full[col] = "United Kingdom"
+            else:
+                X_full[col] = 0.0
+                
+    # Ensure correct column ordering
+    X_full = X_full[model_features]
 
-    if scaler:
-        X_scaled = scaler.transform(X)
-    else:
-        X_scaled = X.values
-
-    proba = model.predict_proba(X_scaled)[:, 1]
+    proba = model.predict_proba(X_full)[:, 1]
     pred  = (proba >= 0.5).astype(int)
 
     df["snapshot_date"]               = date.today().isoformat()
@@ -138,8 +140,8 @@ def run_batch_scoring(input_path: str, output_path: str) -> None:
     if "country" not in df.columns:
         df["country"] = ""
 
-    # 5. Export CSV
-    print(f"[5/5] Exporting results to: {output_path}")
+    # 4. Export CSV
+    print(f"[4/4] Exporting results to: {output_path}")
     df[OUTPUT_COLS].to_csv(output_path, index=False)
 
     # Summary
@@ -148,7 +150,7 @@ def run_batch_scoring(input_path: str, output_path: str) -> None:
     loyal    = (df["risk_level"] == "Loyal").sum()
 
     print()
-    print("  ✓ Scoring complete!")
+    print("  Success: Scoring complete!")
     print(f"  Total customers : {len(df)}")
     print(f"  Critical        : {critical}")
     print(f"  At Risk         : {at_risk}")
@@ -156,7 +158,7 @@ def run_batch_scoring(input_path: str, output_path: str) -> None:
     print(f"  Output file     : {output_path}")
     print()
     print("  Next step: Upload the CSV via")
-    print("  → http://localhost/shopmart/admin/churn/import_churn.php")
+    print("  -> http://localhost/shopmart/admin/churn/import_churn.php")
     print("=" * 55)
 
 

@@ -63,7 +63,14 @@
 
             box.className = 'result-box ' + (isFraud ? 'result-fraud' : 'result-normal');
             box.style.display = 'block';
-            document.getElementById('result-icon').textContent = isFraud ? 'Anomaly' : 'Legitimate';
+            const iconEl = document.getElementById('result-icon');
+            if (isFraud) {
+                iconEl.style.background = '#fee2e2';
+                iconEl.innerHTML = '<i data-lucide="shield-alert" style="width:24px;height:24px;color:#dc2626;"></i>';
+            } else {
+                iconEl.style.background = '#dcfce7';
+                iconEl.innerHTML = '<i data-lucide="shield-check" style="width:24px;height:24px;color:#16a34a;"></i>';
+            }
             document.getElementById('result-title').textContent = isFraud ? 'ANOMALY DETECTED' : 'NORMAL TRANSACTION';
             document.getElementById('result-title').className = 'result-title ' + (isFraud ? 'fraud' : 'normal');
             document.getElementById('result-subtitle').textContent = isFraud
@@ -74,6 +81,7 @@
             document.getElementById('m-action').textContent = isFraud ? 'Block' : 'Allow';
             document.getElementById('score-bar').style.width = scorePercent + '%';
             document.getElementById('score-bar').style.background = isFraud ? '#ef4444' : '#22c55e';
+            if (typeof lucide !== 'undefined') lucide.createIcons();
             box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         } catch (err) {
             alert('Could not connect to Flask API. Make sure main.py is running!');
