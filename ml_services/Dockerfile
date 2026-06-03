@@ -6,7 +6,7 @@ FROM python:3.10-slim
 # - PYTHONDONTWRITEBYTECODE=1: prevents Python from writing .pyc files to disc
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PORT=5000
+    PORT=7860
 
 # Set the working directory in the container
 WORKDIR /app
@@ -27,8 +27,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the rest of the application code and model artifacts into the container
 COPY . /app/
 
-# Expose the API port
-EXPOSE 5000
+# Expose the Hugging Face Spaces port
+EXPOSE 7860
 
 # Run the Flask API using Gunicorn for production readiness
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "2", "--threads", "4", "--timeout", "120", "main:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:7860", "--workers", "2", "--threads", "4", "--timeout", "120", "main:app"]
