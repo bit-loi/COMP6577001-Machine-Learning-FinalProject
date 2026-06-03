@@ -1,5 +1,6 @@
 flask
 flask-cors
+flask-restx
 scikit-learn
 numpy
 pandas

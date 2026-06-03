@@ -46,90 +46,33 @@ def _build_features(data: dict) -> np.ndarray:
     return np.array(vec).reshape(1, -1)
 
 
-@fraud_bp.route('/predict', methods=['POST'])
-def predict():
-    """
-    Endpoint for Anomaly Detection (Fraud)
-    ---
-    tags:
-      - ML Anomaly Detector
-    consumes:
-      - application/json
-    produces:
-      - application/json
-    parameters:
-      - in: body
-        name: body
-        required: true
-        description: JSON containing the IEEE-CIS transaction fields
-        schema:
-          type: object
-          properties:
-            TransactionDT:
-              type: number
-              example: 86400
-            TransactionAmt:
-              type: number
-              example: 150.50
-            card1:
-              type: integer
-              example: 10486
-            card2:
-              type: integer
-              example: 514
-            card3:
-              type: integer
-              example: 150
-            card4:
-              type: integer
-              description: "Encoded: 1=visa, 2=mastercard, 3=amex, 4=discover"
-              example: 1
-            card5:
-              type: integer
-              example: 226
-            card6:
-              type: integer
-              description: "Encoded: 1=credit, 2=debit"
-              example: 2
-            ProductCD:
-              type: integer
-              description: "Encoded: 1=W, 2=H, 3=C, 4=S, 5=R"
-              example: 4
-            addr1:
-              type: number
-              example: 315.0
-            addr2:
-              type: number
-              example: 87.0
-            P_emaildomain:
-              type: integer
-              example: 16
-            R_emaildomain:
-              type: integer
-              example: 16
-    responses:
-      200:
-        description: Successful prediction
-    """
+def run_prediction(data: dict):
+    """Run the existing fraud/anomaly model inference for a JSON payload."""
     if iso_forest is None or scaler is None:
-        return jsonify({'error': 'Fraud models are not loaded'}), 500
+        return {'error': 'Fraud models are not loaded'}, 500
 
     try:
-        features_array  = _build_features(request.json)
+        features_array  = _build_features(data or {})
         scaled          = scaler.transform(features_array)
 
         raw_pred        = iso_forest.predict(scaled)
         anomaly_score   = float(-iso_forest.score_samples(scaled)[0])
         prediction_val  = int(raw_pred[0])
 
-        return jsonify({
+        return {
             'prediction':              [prediction_val],
             'is_anomaly':              prediction_val == -1,
             'anomaly_score':           anomaly_score,
             'processed_features_count': features_array.shape[1],
-        })
+        }, 200
     except Exception as e:
-        return jsonify({'error': 'Prediction failed', 'details': str(e)}), 500
+        return {'error': 'Prediction failed', 'details': str(e)}, 500
+
+
+def predict():
+    """Backward-compatible callable for the main /predict endpoint."""
+    payload, status_code = run_prediction(request.json)
+    return jsonify(payload), status_code
 
 
 @fraud_bp.route('/predict/simulate', methods=['POST'])

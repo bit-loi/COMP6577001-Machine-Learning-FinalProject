@@ -20,18 +20,24 @@
         const time = new Date().toISOString().split('T')[1].slice(0, 8);
         const div = document.createElement('div');
         div.className = `mb-3 leading-relaxed ${type === 'error' ? 'text-red-600 bg-red-50 px-2 py-1 rounded font-bold' : (type === 'warning' ? 'text-orange-600 font-semibold' : 'text-gray-700')}`;
-        div.innerHTML = `[${time}] &nbsp; ${msg}`;
+        div.textContent = `[${time}]   ${msg}`;
         terminal.appendChild(div);
         terminal.scrollTop = terminal.scrollHeight;
         if (terminal.children.length > 50) terminal.removeChild(terminal.firstChild);
     }
 
-    function randInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
-    function randFloat(min, max) { return parseFloat((Math.random() * (max - min) + min).toFixed(2)); }
-    function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+    function secureRandom() {
+        const values = new Uint32Array(1);
+        window.crypto.getRandomValues(values);
+        return values[0] / 0x100000000;
+    }
+
+    function randInt(min, max) { return Math.floor(secureRandom() * (max - min + 1)) + min; }
+    function randFloat(min, max) { return parseFloat((secureRandom() * (max - min) + min).toFixed(2)); }
+    function pick(arr) { return arr[randInt(0, arr.length - 1)]; }
 
     function buildPayload() {
-        const isAnomalous = Math.random() < 0.20;
+        const isAnomalous = secureRandom() < 0.20;
         let amt, card1, card2, card3, card4, card5, card6, addr1, addr2, pEmail, rEmail, txDT;
 
         if (isAnomalous) {
@@ -49,7 +55,7 @@
 
     async function tick() {
         if (!isRunning) return;
-        const trxId = Math.floor(10000 + Math.random() * 90000);
+        const trxId = randInt(10000, 99999);
         const { isAnomalous, amt, payload } = buildPayload();
 
         logTerminal(`Fetching features for TRX_ID: ${trxId} [${isAnomalous ? 'SUSPICIOUS_PROFILE' : 'STANDARD_PROFILE'}]...`, isAnomalous ? 'warning' : 'info');

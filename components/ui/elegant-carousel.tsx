@@ -56,7 +56,7 @@ export default function ElegantCarousel() {
   const SLIDE_DURATION = 6000;
 
   const goToSlide = useCallback((index: number) => {
-    if (isTransitioning || index === currentIndex) return;
+    if (!Number.isInteger(index) || index < 0 || index >= slides.length || isTransitioning || index === currentIndex) return;
     setIsTransitioning(true);
     setProgress(0);
     setTimeout(() => {
@@ -87,7 +87,7 @@ export default function ElegantCarousel() {
     };
   }, [currentIndex, isPaused, goNext]);
 
-  const currentSlide = slides[currentIndex];
+  const currentSlide = slides.find((_, index) => index === currentIndex) ?? slides[0];
 
   return (
     <div 

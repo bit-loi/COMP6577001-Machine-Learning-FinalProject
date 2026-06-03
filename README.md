@@ -86,5 +86,96 @@ To fulfill the evaluation requirement, the deployed dashboard is subjected to ph
 5. Access the Administration Dashboard at: `http://localhost/shopmart/admin/`
 6. Access the Churn Prediction Dashboard at: `http://localhost/shopmart/admin/churn/`
 
+### D. Deploying the ML Service to Hugging Face Spaces
+The Flask-based ML API in `ml_services/` is deployed to Hugging Face Spaces using Docker.
+
+#### Hugging Face Space Settings
+- **Space SDK:** Docker
+- **Space name:** `shopmart-ml-service`
+- **Hardware:** CPU Basic
+- **App port:** `7860`
+- **Root app file:** `main.py`
+- **Gunicorn entrypoint:** `main:app`
+
+The required Space metadata should be present in the Space `README.md`:
+
+```yaml
+---
+title: Shopmart ML Service
+sdk: docker
+app_port: 7860
+license: mit
+---
+```
+
+#### Required Docker Configuration
+The `ml_services/Dockerfile` must expose and run the service on port `7860`:
+
+```dockerfile
+EXPOSE 7860
+CMD ["gunicorn", "--bind", "0.0.0.0:7860", "--workers", "2", "--threads", "4", "--timeout", "120", "main:app"]
+```
+
+The Flask app also reads the port from the environment:
+
+```python
+app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 7860)))
+```
+
+#### Manual Deployment
+From the project root:
+
+```bash
+cd ml_services
+git clone https://huggingface.co/spaces/JasonLOi/shopmart-ml-service hf-space
+```
+
+Copy the ML service files into the cloned Space repository:
+
+```bash
+cp -r ./* hf-space/
+```
+
+On Windows PowerShell:
+
+```powershell
+Copy-Item -Path .\* -Destination .\hf-space\ -Recurse -Force -Exclude hf-space,venv,__pycache__,.env
+```
+
+Then commit and push:
+
+```bash
+cd hf-space
+git add .
+git commit -m "Deploy Shopmart ML service"
+git push
+```
+
+After Hugging Face finishes building the Docker image, the service is available at:
+
+```text
+https://jasonloi-shopmart-ml-service.hf.space/
+```
+
+Useful endpoints:
+
+```text
+GET  /
+GET  /health
+GET  /docs
+POST /predict
+```
+
+#### CI/CD Deployment
+The repository includes a GitHub Actions workflow at `.github/workflows/ci-cd.yml`.
+To enable automatic Hugging Face deployment, configure these GitHub repository secrets:
+
+```text
+HF_TOKEN=your_huggingface_write_token
+HF_SPACE_REPO=JasonLOi/shopmart-ml-service
+```
+
+When changes are pushed to `main` or `master`, the workflow runs quality checks, builds Docker images, and deploys `ml_services/` to the Hugging Face Space if both secrets are configured.
+
 ---
 *Disclaimer: This project repository utilizes continuous integration via Git. All theoretical formulations and dataset preprocessing scripts are maintained strictly within the project policies established by BINUS University.*

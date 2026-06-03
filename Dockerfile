@@ -28,16 +28,21 @@ COPY . /var/www/html/
 RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html
 
-# Configure Apache to allow .htaccess
-RUN echo '<Directory /var/www/html/>\n\
+# Configure Apache to allow .htaccess and listen on an unprivileged port
+RUN sed -i 's/Listen 80/Listen 8080/' /etc/apache2/ports.conf \
+    && sed -i 's/<VirtualHost \*:80>/<VirtualHost *:8080>/' /etc/apache2/sites-available/000-default.conf \
+    && echo '<Directory /var/www/html/>\n\
     Options Indexes FollowSymLinks\n\
     AllowOverride All\n\
     Require all granted\n\
 </Directory>' > /etc/apache2/conf-available/shopmart.conf \
-    && a2enconf shopmart
+    && a2enconf shopmart \
+    && chown -R www-data:www-data /var/lock/apache2 /var/log/apache2 /var/run/apache2
 
-# Expose port 80
-EXPOSE 80
+# Expose the unprivileged Apache port
+EXPOSE 8080
+
+USER www-data
 
 # Start Apache in foreground
 CMD ["apache2-foreground"]

@@ -24,6 +24,10 @@ Thumbs.db
 # Logs
 *.log
 
+# Local secrets
+.env
+ml_services/.env
+
 # Temporary files
 tmp/
 temp/

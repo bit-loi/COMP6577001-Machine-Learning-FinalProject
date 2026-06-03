@@ -34,6 +34,12 @@ vendor/
 # Node Modules (if using npm)
 node_modules/
 
+# ML service local artifacts
+ml_services/hf-space/
+ml_services/venv/
+ml_services/__pycache__/
+ml_services/.env
+
 # Database Backups
 *.sql
 database/backups/

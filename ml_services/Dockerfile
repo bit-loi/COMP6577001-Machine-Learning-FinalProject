@@ -27,8 +27,13 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the rest of the application code and model artifacts into the container
 COPY . /app/
 
+RUN adduser --disabled-password --gecos "" appuser \
+    && chown -R appuser:appuser /app
+
 # Expose the Hugging Face Spaces port
 EXPOSE 7860
+
+USER appuser
 
 # Run the Flask API using Gunicorn for production readiness
 CMD ["gunicorn", "--bind", "0.0.0.0:7860", "--workers", "2", "--threads", "4", "--timeout", "120", "main:app"]

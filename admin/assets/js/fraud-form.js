@@ -64,13 +64,13 @@
             box.className = 'result-box ' + (isFraud ? 'result-fraud' : 'result-normal');
             box.style.display = 'block';
             const iconEl = document.getElementById('result-icon');
-            if (isFraud) {
-                iconEl.style.background = '#fee2e2';
-                iconEl.innerHTML = '<i data-lucide="shield-alert" style="width:24px;height:24px;color:#dc2626;"></i>';
-            } else {
-                iconEl.style.background = '#dcfce7';
-                iconEl.innerHTML = '<i data-lucide="shield-check" style="width:24px;height:24px;color:#16a34a;"></i>';
-            }
+            const icon = document.createElement('i');
+            icon.setAttribute('data-lucide', isFraud ? 'shield-alert' : 'shield-check');
+            icon.style.width = '24px';
+            icon.style.height = '24px';
+            icon.style.color = isFraud ? '#dc2626' : '#16a34a';
+            iconEl.style.background = isFraud ? '#fee2e2' : '#dcfce7';
+            iconEl.replaceChildren(icon);
             document.getElementById('result-title').textContent = isFraud ? 'ANOMALY DETECTED' : 'NORMAL TRANSACTION';
             document.getElementById('result-title').className = 'result-title ' + (isFraud ? 'fraud' : 'normal');
             document.getElementById('result-subtitle').textContent = isFraud

@@ -7,7 +7,6 @@ All route modules import from here via:
 """
 
 import os
-import pickle
 import joblib
 
 _BASE = os.path.dirname(os.path.abspath(__file__))
@@ -17,10 +16,8 @@ iso_forest = None
 scaler     = None
 
 try:
-    with open(os.path.join(_BASE, 'isolation_forest.pkl'), 'rb') as f:
-        iso_forest = pickle.load(f)
-    with open(os.path.join(_BASE, 'scaler.pkl'), 'rb') as f:
-        scaler = pickle.load(f)
+    iso_forest = joblib.load(os.path.join(_BASE, 'isolation_forest.pkl'))
+    scaler = joblib.load(os.path.join(_BASE, 'scaler.pkl'))
     print("- Isolation Forest + Scaler loaded successfully")
 except Exception as e:
     print(f"[WARN] Could not load fraud models: {e}")
