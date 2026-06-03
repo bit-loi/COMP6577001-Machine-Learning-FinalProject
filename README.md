@@ -123,14 +123,63 @@ app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 7860)))
 ```
 
 #### Manual Deployment
-From the project root:
+The project uses two Git repositories during manual Hugging Face deployment:
+
+```text
+shopmart/
+  ml_services/          # Main project ML source. Edit files here first.
+    main.py
+    Dockerfile
+    requirements.txt
+
+    hf-space/           # Cloned Hugging Face Space repository. Push HF deploys here.
+      main.py
+      Dockerfile
+      requirements.txt
+```
+
+Use this rule to avoid committing to the wrong repository:
+
+```text
+Edit ML source in:      C:\xampp\htdocs\shopmart\ml_services
+Push Hugging Face from: C:\xampp\htdocs\shopmart\ml_services\hf-space
+Push GitHub from:       C:\xampp\htdocs\shopmart
+```
+
+Check where you are before committing:
+
+```powershell
+pwd
+git remote -v
+```
+
+If the remote is Hugging Face, you are in the deployment repository:
+
+```text
+https://huggingface.co/spaces/JasonLOi/shopmart-ml-service
+```
+
+If the remote is GitHub, you are in the main project repository:
+
+```text
+https://github.com/.../COMP6577001-Machine-Learning-FinalProject.git
+```
+
+Clone the Hugging Face Space only once:
 
 ```bash
 cd ml_services
 git clone https://huggingface.co/spaces/JasonLOi/shopmart-ml-service hf-space
 ```
 
-Copy the ML service files into the cloned Space repository:
+If `hf-space` already exists, do not clone again. Reuse the existing folder:
+
+```powershell
+cd C:\xampp\htdocs\shopmart\ml_services\hf-space
+git remote -v
+```
+
+Before deploying, copy the latest ML source files into the Hugging Face clone:
 
 ```bash
 cp -r ./* hf-space/
@@ -139,18 +188,35 @@ cp -r ./* hf-space/
 On Windows PowerShell:
 
 ```powershell
+cd C:\xampp\htdocs\shopmart\ml_services
 Copy-Item -Path .\* -Destination .\hf-space\ -Recurse -Force -Exclude hf-space,venv,__pycache__,.env
 ```
 
-Then commit and push:
+Then commit and push from the Hugging Face clone:
 
-```bash
-cd hf-space
+```powershell
+cd C:\xampp\htdocs\shopmart\ml_services\hf-space
+git status
 git add .
 git commit -m "Deploy Shopmart ML service"
 git push
 ```
 
+If `git status` says the branch is ahead of `origin/main`, the local deployment commit has not reached Hugging Face yet:
+
+```text
+Your branch is ahead of 'origin/main' by 1 commit.
+```
+
+Run:
+
+```powershell
+git push
+```
+
+That push triggers the Hugging Face Docker rebuild.
+
+#### Deployment Verification
 After Hugging Face finishes building the Docker image, the service is available at:
 
 ```text
@@ -172,6 +238,48 @@ https://huggingface.co/spaces/JasonLOi/shopmart-ml-service/docs
 That URL points to the Hugging Face Space repository UI, not the running Flask container.
 
 The `/docs` page is the primary API access page for testing the deployed REST endpoints through Swagger UI.
+
+To verify that the running container uses the latest code, check the Swagger version shown near the title. The expected version is defined in `ml_services/main.py`:
+
+```python
+version="1.0.1"
+```
+
+You can also inspect the generated Swagger JSON directly:
+
+```text
+https://jasonloi-shopmart-ml-service.hf.space/swagger.json
+```
+
+If the Swagger UI still shows an older version after `git push`, check these items:
+
+```powershell
+cd C:\xampp\htdocs\shopmart\ml_services\hf-space
+Select-String -Path .\main.py -Pattern 'version|namespace'
+git status
+```
+
+Expected markers:
+
+```text
+version="1.0.1"
+namespace("prediction"
+namespace("churn"
+namespace("batch"
+namespace("segmentation"
+```
+
+If `hf-space/main.py` is still old, sync it again:
+
+```powershell
+cd C:\xampp\htdocs\shopmart\ml_services\hf-space
+Copy-Item ..\main.py .\main.py -Force
+git add main.py
+git commit -m "Fix Swagger documentation for all ML endpoints"
+git push
+```
+
+If the Hugging Face `Files` tab shows the new `main.py` but the App still shows the old Swagger version, open the Space menu and choose **Restart Space**. Use **Factory reboot** only if a normal restart does not refresh the container.
 
 Useful endpoints:
 
