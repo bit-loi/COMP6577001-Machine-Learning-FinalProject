@@ -6,10 +6,11 @@ Routes:
     POST /batch/churn   - Trigger batch scoring script
 """
 
-import os
-import subprocess
+import io
+from contextlib import redirect_stderr, redirect_stdout
 import pandas as pd
 from flask import Blueprint, request, jsonify
+from churn_batch_scoring import DEFAULT_INPUT, DEFAULT_OUTPUT, run_batch_scoring
 from models import churn_model
 
 churn_bp = Blueprint('churn', __name__)
@@ -103,25 +104,28 @@ def batch_churn():
     Endpoint to trigger the Batch Churn Scoring script
     """
     try:
-        # Run the churn_batch_scoring.py script
-        script_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'ml_services', 'churn_batch_scoring.py')
-        if not os.path.exists(script_path):
-            # Fallback path if working dir is different
-            script_path = os.path.join(os.path.dirname(__file__), 'churn_batch_scoring.py')
+        output = io.StringIO()
+        with redirect_stdout(output), redirect_stderr(output):
+            run_batch_scoring(DEFAULT_INPUT, DEFAULT_OUTPUT)
 
-        result = subprocess.run(['python', script_path], capture_output=True, text=True)
-        
-        if result.returncode == 0:
+        return jsonify({
+            "status": "success",
+            "message": "Batch scoring completed successfully",
+            "output": output.getvalue()
+        })
+    except SystemExit as e:
+        output_text = output.getvalue() if 'output' in locals() else ''
+        if e.code == 0:
             return jsonify({
                 "status": "success",
                 "message": "Batch scoring completed successfully",
-                "output": result.stdout
+                "output": output_text
             })
-        else:
-            return jsonify({
-                "status": "error",
-                "message": "Batch scoring failed",
-                "error": result.stderr
-            }), 500
+
+        return jsonify({
+            "status": "error",
+            "message": "Batch scoring failed",
+            "error": output_text
+        }), 500
     except Exception as e:
         return jsonify({'error': str(e)}), 500

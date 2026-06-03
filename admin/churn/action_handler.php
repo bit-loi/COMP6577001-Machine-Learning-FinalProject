@@ -8,6 +8,12 @@ if (!isset($_SESSION['is_admin']) || $_SESSION['is_admin'] != 1) {
 }
 header('Content-Type: application/json');
 
+if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !verify_csrf_token()) {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'message' => 'Invalid request token.']);
+    exit();
+}
+
 $custId      = trim($_POST['customer_id']    ?? '');
 $scoreId     = intval($_POST['churn_score_id'] ?? 0);
 $actionType  = trim($_POST['action_type']    ?? '');

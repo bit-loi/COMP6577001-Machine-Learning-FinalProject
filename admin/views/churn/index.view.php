@@ -93,6 +93,7 @@
             </a>
             <!-- Clear Data Button -->
             <form method="POST" onsubmit="return confirm('Are you sure you want to delete all churn data? This action cannot be undone.');" style="margin:0;">
+                <?php echo csrf_field(); ?>
                 <input type="hidden" name="action" value="clear_all">
                 <button type="submit" style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;background:#ef4444;color:#fff;border:none;border-radius:8px;font-size:0.78rem;font-weight:600;cursor:pointer;transition:background .2s;" onmouseover="this.style.background='#dc2626'" onmouseout="this.style.background='#ef4444'">
                     <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
@@ -188,7 +189,8 @@ window.churnChartData = {
     distData: <?php echo json_encode($distData); ?>
 };
 window.churnConfig = {
-    actionHandlerUrl: '<?php echo APPURL; ?>admin/churn/action_handler.php'
+    actionHandlerUrl: '<?php echo APPURL; ?>admin/churn/action_handler.php',
+    csrfToken: '<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8'); ?>'
 };
 </script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>

@@ -141,6 +141,7 @@
                 </div>
 
                 <form method="POST" action="<?php echo APPURL; ?>shopping/cart.php">
+                    <?php echo csrf_field(); ?>
                     <input type="hidden" name="product_id" value="<?php echo $product->id; ?>">
                     <input type="hidden" name="quantity" id="form-qty" value="1">
                     <button type="submit" name="add_to_cart" class="btn-add-cart">

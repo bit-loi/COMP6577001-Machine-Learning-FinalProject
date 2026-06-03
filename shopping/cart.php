@@ -6,6 +6,8 @@ require '../includes/product-image.php';
 
 // Handle add to cart
 if (isset($_POST['add_to_cart']) && isset($_POST['product_id'])) {
+    require_valid_csrf_token();
+
     $productId = (int)$_POST['product_id'];
     $quantity = max(1, (int)($_POST['quantity'] ?? 1));
     $userId = $_SESSION['user_id'];
@@ -25,8 +27,10 @@ if (isset($_POST['add_to_cart']) && isset($_POST['product_id'])) {
 }
 
 // Handle remove from cart
-if (isset($_GET['remove'])) {
-    $cartId = (int)$_GET['remove'];
+if (isset($_POST['remove_from_cart']) && isset($_POST['cart_id'])) {
+    require_valid_csrf_token();
+
+    $cartId = (int)$_POST['cart_id'];
     $stmt = $conn->prepare("DELETE FROM cart WHERE id = ? AND user_id = ?");
     $stmt->execute([$cartId, $_SESSION['user_id']]);
     header("Location: cart.php");
@@ -73,7 +77,11 @@ $total = $subtotal + $tax + $shipping;
                     </div>
                     <div style="text-align: right;">
                         <div style="font-size: 1rem; font-weight: 700; color: #EE4D2D;">$<?php echo number_format($itemPrice * $item->quantity, 2); ?></div>
-                        <a href="cart.php?remove=<?php echo $item->id; ?>" style="font-size: 0.75rem; color: #ef4444; text-decoration: none; margin-top: 4px; display: block;">Remove</a>
+                        <form method="POST" action="cart.php" style="margin-top: 4px;">
+                            <?php echo csrf_field(); ?>
+                            <input type="hidden" name="cart_id" value="<?php echo $item->id; ?>">
+                            <button type="submit" name="remove_from_cart" style="font-size: 0.75rem; color: #ef4444; background: transparent; border: 0; padding: 0; cursor: pointer;">Remove</button>
+                        </form>
                     </div>
                 </div>
                 <?php endforeach; ?>

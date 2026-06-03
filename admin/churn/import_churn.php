@@ -23,6 +23,10 @@ $importType  = '';   // 'success' | 'error' | 'info'
 $importStats = [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file'])) {
+    if (!verify_csrf_token()) {
+        $importMsg  = 'Invalid request token. Please refresh the page and try again.';
+        $importType = 'error';
+    } else {
     $file = $_FILES['csv_file'];
 
     if ($file['error'] !== UPLOAD_ERR_OK) {
@@ -91,6 +95,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file'])) {
         $importMsg   = "Import complete: {$inserted} new rows, {$updated} updated, {$skipped} skipped.";
         $importType  = empty($errors) ? 'success' : 'info';
     }
+    }
 }
 
 $pageTitle       = 'Import Churn Scores';
@@ -138,6 +143,7 @@ require_once '../includes/header.php';
             Upload Churn Scores CSV
         </div>
         <form method="POST" enctype="multipart/form-data">
+            <?php echo csrf_field(); ?>
             <label style="display:block;margin-bottom:8px;font-size:0.8rem;font-weight:600;color:#475569;">Select CSV File</label>
             <div id="drop-zone" style="border:2px dashed #e2e8f0;border-radius:12px;padding:40px 20px;text-align:center;cursor:pointer;transition:all .2s;margin-bottom:20px;background:#fafafa;"
                 ondragover="event.preventDefault();this.style.borderColor='#EE4D2D';this.style.background='#FFF4ED';"

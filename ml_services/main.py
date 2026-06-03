@@ -5,6 +5,8 @@ Consolidates the modularized blueprints (fraud, churn, and segmentation)
 into a single Flask + Swagger application.
 """
 
+import os
+
 from flask import Flask, jsonify
 from flask_cors import CORS
 from flasgger import Swagger
@@ -58,4 +60,8 @@ def health_check():
 
 if __name__ == '__main__':
     # Start the Flask development server on port 5000
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(
+        host=os.environ.get('FLASK_HOST', '127.0.0.1'),
+        port=int(os.environ.get('FLASK_PORT', '5000')),
+        debug=os.environ.get('FLASK_DEBUG', '').lower() == 'true',
+    )

@@ -13,6 +13,7 @@ $repo->ensureTables();
 
 // Handle clear all request
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'clear_all') {
+    require_valid_csrf_token();
     $repo->clearAll();
     header('Location: index.php?msg=cleared');
     exit();

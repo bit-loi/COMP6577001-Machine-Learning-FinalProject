@@ -22,6 +22,16 @@ FEATURE_ORDER = [
 ]
 
 
+def _simulation_baseline(n_feat: int, amount: float) -> np.ndarray:
+    """Build a stable low-risk synthetic vector without pseudo-random generation."""
+    vec = np.zeros(n_feat)
+    if n_feat > 0:
+        vec[0] = 86400 + min(max(amount, 0.0), 1000.0)
+    if n_feat > 1:
+        vec[1] = amount
+    return vec
+
+
 def _build_features(data: dict) -> np.ndarray:
     """Parse request JSON into a feature vector aligned with the trained model."""
     vec = [float(data.get(col, 0)) for col in FEATURE_ORDER]
@@ -157,8 +167,7 @@ def simulate_predict():
             vec[0] = amount * 10   # TransactionDT extremity
             vec[1] = amount        # TransactionAmt
         else:
-            vec = np.random.normal(0, 0.1, n_feat)
-            vec[1] = amount        # keep TransactionAmt realistic
+            vec = _simulation_baseline(n_feat, amount)
 
         scaled     = scaler.transform(vec.reshape(1, -1))
         prediction = iso_forest.predict(scaled)

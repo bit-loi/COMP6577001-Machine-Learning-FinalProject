@@ -17,10 +17,18 @@
         btn.disabled = true;
         btn.style.opacity = '0.6';
 
+        const body = new URLSearchParams({
+            customer_id: customerId,
+            churn_score_id: scoreId,
+            action_type: actionType,
+            admin_note: '',
+            csrf_token: config.csrfToken || ''
+        });
+
         fetch(config.actionHandlerUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: `customer_id=${encodeURIComponent(customerId)}&churn_score_id=${scoreId}&action_type=${encodeURIComponent(actionType)}&admin_note=`
+            body
         })
         .then(r => r.json())
         .then(data => {
