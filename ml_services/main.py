@@ -18,8 +18,8 @@ CORS(app)
 api = Api(
     app,
     title="Shopmart ML Service API",
-    version="1.0.0",
-    description="A Flask-based ML inference service for Shopmart predictions.",
+    version="1.0.1",
+    description="A Flask-based ML inference service for anomaly detection, churn prediction, batch scoring, and segmentation.",
     doc="/docs",
 )
 
