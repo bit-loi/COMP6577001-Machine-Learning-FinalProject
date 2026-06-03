@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<ruleset name="Shopmart PHP Security Standards">
+    <description>
+        Shopmart is a standalone PHP application, not a WordPress or Magento codebase.
+        Keep generic PHP security checks enabled while excluding framework-specific
+        escaping, nonce, and include-file rules that require unavailable framework APIs.
+    </description>
+
+    <file>.</file>
+
+    <exclude-pattern>vendor/*</exclude-pattern>
+    <exclude-pattern>node_modules/*</exclude-pattern>
+    <exclude-pattern>ml_services/*</exclude-pattern>
+    <exclude-pattern>storage/*</exclude-pattern>
+
+    <rule ref="Generic"/>
+    <rule ref="PSR12"/>
+
+    <exclude name="PHPCS_Magento2_Security_XssTemplate"/>
+    <exclude name="PHPCS_Magento2_Security_IncludeFile"/>
+    <exclude name="PHPCS_MEQP1_Templates_XssTemplate"/>
+    <exclude name="PHPCS_WordPress_Security_EscapeOutput"/>
+    <exclude name="PHPCS_WordPress_Security_NonceVerification"/>
+    <exclude name="PHPCS_WordPress_Security_ValidatedSanitizedInput"/>
+</ruleset>

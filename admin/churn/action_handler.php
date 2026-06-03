@@ -1,6 +1,6 @@
 <?php
 session_start();
-require_once '../../config/config.php';
+require_once __DIR__ . '/../../config/config.php';
 if (!isset($_SESSION['is_admin']) || $_SESSION['is_admin'] != 1) {
     http_response_code(403);
     echo json_encode(['success' => false, 'message' => 'Unauthorized']);
@@ -8,17 +8,17 @@ if (!isset($_SESSION['is_admin']) || $_SESSION['is_admin'] != 1) {
 }
 header('Content-Type: application/json');
 
-if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !verify_csrf_token()) {
+if (safe_request_method() !== 'POST' || !verify_csrf_token()) {
     http_response_code(403);
     echo json_encode(['success' => false, 'message' => 'Invalid request token.']);
     exit();
 }
 
-$custId      = trim($_POST['customer_id']    ?? '');
-$scoreId     = intval($_POST['churn_score_id'] ?? 0);
-$actionType  = trim($_POST['action_type']    ?? '');
-$adminNote   = trim($_POST['admin_note']     ?? '');
-$actionedBy  = $_SESSION['username'] ?? 'admin';
+$custId      = safe_text($_POST['customer_id'] ?? '', 80);
+$scoreId     = safe_int($_POST['churn_score_id'] ?? 0);
+$actionType  = safe_text($_POST['action_type'] ?? '', 40);
+$adminNote   = safe_text($_POST['admin_note'] ?? '', 500);
+$actionedBy  = safe_text($_SESSION['username'] ?? 'admin', 80);
 
 $allowed = ['contacted', 'voucher_sent', 'email_sent', 'customer_returned', 'ignored'];
 
@@ -39,7 +39,7 @@ try {
         'contacted'         => 'Marked as Contacted',
         'voucher_sent'      => 'Voucher Sent',
         'email_sent'        => 'Email Sent',
-        'customer_returned' => 'Customer Returned ✓',
+        'customer_returned' => 'Customer Returned',
         'ignored'           => 'Ignored',
         default             => 'Action Recorded',
     };

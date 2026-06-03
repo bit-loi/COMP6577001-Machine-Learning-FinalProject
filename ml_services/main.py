@@ -7,9 +7,9 @@ from flask_cors import CORS
 from flask_restx import Api, Resource, fields
 
 from models import iso_forest, churn_model
-from routes_fraud import fraud_bp, run_prediction
-from routes_churn import churn_bp
-from routes_segmentation import segmentation_bp
+from routes_fraud import run_prediction, simulate_predict
+from routes_churn import batch_churn, predict_churn
+from routes_segmentation import segment_user
 
 app = Flask(__name__)
 # Enable CORS so both React frontend and PHP backend can communicate with this API
@@ -24,6 +24,9 @@ api = Api(
 )
 
 predict_ns = api.namespace("prediction", path="/predict", description="ML prediction endpoints")
+churn_ns = api.namespace("churn", path="/predict/churn", description="Customer churn prediction endpoints")
+batch_ns = api.namespace("batch", path="/batch", description="Batch scoring endpoints")
+segment_ns = api.namespace("segmentation", path="/segment", description="Customer segmentation endpoints")
 
 predict_request = api.model("PredictionRequest", {
     "text": fields.String(
@@ -46,10 +49,17 @@ predict_request = api.model("PredictionRequest", {
     "R_emaildomain": fields.Integer(required=False, example=16),
 })
 
-# Register Blueprints
-app.register_blueprint(fraud_bp)
-app.register_blueprint(churn_bp)
-app.register_blueprint(segmentation_bp)
+simulate_request = api.model("SimulationRequest", {
+    "amount": fields.Float(required=False, description="Transaction amount to simulate.", example=120.0),
+})
+
+churn_request = api.model("ChurnPredictionRequest", {
+    "orders_last_window": fields.Integer(required=True, example=5),
+    "revenue_last_window": fields.Float(required=True, example=120.50),
+    "recency_days": fields.Integer(required=True, example=15),
+    "customer_age_days": fields.Integer(required=True, example=180),
+    "country": fields.String(required=False, example="United Kingdom"),
+})
 
 
 @app.route('/', methods=['GET'])
@@ -59,7 +69,11 @@ def index():
         "message": "Shopmart ML Service is running",
         "docs": "/docs",
         "health": "/health",
-        "predict": "/predict"
+        "predict": "/predict",
+        "simulate": "/predict/simulate",
+        "churn": "/predict/churn",
+        "batch_churn": "/batch/churn",
+        "segment": "/segment",
     })
 
 
@@ -76,6 +90,39 @@ class PredictResource(Resource):
     def post(self):
         payload, status_code = run_prediction(api.payload or {})
         return payload, status_code
+
+
+@predict_ns.route("/simulate")
+class SimulatePredictionResource(Resource):
+    @predict_ns.expect(simulate_request, validate=False)
+    @predict_ns.response(200, "Successful simulation prediction")
+    @predict_ns.response(500, "Simulation failed")
+    def post(self):
+        return simulate_predict()
+
+
+@churn_ns.route("")
+class ChurnPredictionResource(Resource):
+    @churn_ns.expect(churn_request, validate=False)
+    @churn_ns.response(200, "Successful churn prediction")
+    @churn_ns.response(500, "Churn model unavailable or prediction failed")
+    def post(self):
+        return predict_churn()
+
+
+@batch_ns.route("/churn")
+class BatchChurnResource(Resource):
+    @batch_ns.response(200, "Batch scoring completed")
+    @batch_ns.response(500, "Batch scoring failed")
+    def post(self):
+        return batch_churn()
+
+
+@segment_ns.route("")
+class SegmentResource(Resource):
+    @segment_ns.response(200, "Successful customer segmentation")
+    def post(self):
+        return segment_user()
 
 
 if __name__ == '__main__':

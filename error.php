@@ -1,16 +1,21 @@
 <?php
-$type = $_GET['type'] ?? '500';
+$requestedType = (string) ($_GET['type'] ?? '500');
 $errorTitles = ['404' => 'Page Not Found', '403' => 'Access Denied', '500' => 'System Error', '503' => 'Service Unavailable'];
 $errorMessages = ['404' => 'The page you are looking for doesn\'t exist or has been moved.', '403' => 'You don\'t have permission to access this page.', '500' => 'Something went wrong on our end. We\'re working to fix it.', '503' => 'Our servers are temporarily unavailable. Please try again shortly.'];
+$type = array_key_exists($requestedType, $errorTitles) ? $requestedType : '500';
 $title = $errorTitles[$type] ?? 'Unknown Error';
 $message = $errorMessages[$type] ?? 'Something went wrong.';
+
+function error_page_escape($value): string {
+    return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo "$type — $title"; ?> | Shopmart</title>
+    <title><?php echo error_page_escape("$type - $title"); ?> | Shopmart</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; background: #f5f5f5; color: #333; margin: 0; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
@@ -28,9 +33,9 @@ $message = $errorMessages[$type] ?? 'Something went wrong.';
 <body>
     <div class="error-card">
         <div style="margin-bottom: 24px;">🛒 <span style="font-weight: 800; color: #FF6B35;">Shopmart</span></div>
-        <div class="error-code"><?php echo $type; ?></div>
-        <div class="error-title"><?php echo $title; ?></div>
-        <div class="error-msg"><?php echo $message; ?></div>
+        <div class="error-code"><?php echo error_page_escape($type); ?></div>
+        <div class="error-title"><?php echo error_page_escape($title); ?></div>
+        <div class="error-msg"><?php echo error_page_escape($message); ?></div>
         <div style="display: flex; gap: 12px; justify-content: center;">
             <a href="/shopmart/" class="btn btn-primary">← Back to Store</a>
             <button onclick="window.history.back()" class="btn btn-secondary">Go Back</button>

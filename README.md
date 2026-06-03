@@ -157,6 +157,22 @@ After Hugging Face finishes building the Docker image, the service is available 
 https://jasonloi-shopmart-ml-service.hf.space/
 ```
 
+If the root URL returns a plain Flask `Not Found` page during deployment checks, open the Swagger documentation URL directly:
+
+```text
+https://jasonloi-shopmart-ml-service.hf.space/docs
+```
+
+Do not use the Hugging Face repository page URL for API endpoints:
+
+```text
+https://huggingface.co/spaces/JasonLOi/shopmart-ml-service/docs
+```
+
+That URL points to the Hugging Face Space repository UI, not the running Flask container.
+
+The `/docs` page is the primary API access page for testing the deployed REST endpoints through Swagger UI.
+
 Useful endpoints:
 
 ```text
@@ -164,7 +180,17 @@ GET  /
 GET  /health
 GET  /docs
 POST /predict
+POST /predict/simulate
+POST /predict/churn
+POST /batch/churn
+POST /segment
 ```
+
+Deployment scope:
+
+- `POST /predict` and `POST /predict/simulate` run the deployed Isolation Forest anomaly/fraud detection model.
+- `POST /predict/churn` uses the churn model when the churn `.joblib` artifact is available in the deployed Space.
+- `POST /segment` is currently a lightweight segmentation placeholder endpoint.
 
 #### CI/CD Deployment
 The repository includes a GitHub Actions workflow at `.github/workflows/ci-cd.yml`.

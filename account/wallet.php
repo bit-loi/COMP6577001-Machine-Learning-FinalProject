@@ -1,9 +1,9 @@
 <?php
 session_start();
-require '../config/config.php';
-require '../middleware/auth.php';
+require __DIR__ . '/../config/config.php';
+require __DIR__ . '/../middleware/auth.php';
 
-$userId = $_SESSION['user_id'];
+$userId = safe_int($_SESSION['user_id'] ?? 0);
 $successMsg = '';
 $errorMsg = '';
 
@@ -25,24 +25,19 @@ $user = $stmtUser->fetch(PDO::FETCH_OBJ);
 $walletBalance = $user ? (float)$user->wallet_balance : 0;
 $accountName = $user ? trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? '')) : '';
 if ($accountName === '') {
-    $accountName = ucwords($user->username ?? $_SESSION['username'] ?? 'User');
+    $accountName = ucwords(safe_text($user->username ?? ($_SESSION['username'] ?? 'User'), 80));
 }
 $isAdminWallet = ($walletBalance < 0);
 
-// Generate CSRF token
-if (empty($_SESSION['csrf_token'])) {
-    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-}
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['topup'])) {
-    // CSRF validation
-    if (empty($_POST['csrf_token']) || !isset($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+if (safe_request_method() === 'POST' && isset($_POST['topup'])) {
+    if (!verify_csrf_token()) {
         $errorMsg = 'Invalid security token. Please refresh the page.';
     } elseif ($isAdminWallet) {
         $errorMsg = 'Akun admin memiliki saldo unlimited dan tidak perlu top-up.';
     } else {
         $amount = round((float)($_POST['amount'] ?? 0), 2);
-        $method = $_POST['method'] ?? 'card';
+        $method = safe_text($_POST['method'] ?? 'card', 20);
+        $method = in_array($method, ['card', 'bank', 'ewallet'], true) ? $method : 'card';
         if ($amount < 5) {
             $errorMsg = 'Minimum top-up adalah $5.00';
         } elseif ($amount > 5000) {
@@ -77,32 +72,32 @@ try {
 }
 
 $currentPage = 'wallet';
-include '../includes/header.php';
-include 'includes/styles.php';
+include __DIR__ . '/../includes/header.php';
+include __DIR__ . '/includes/styles.php';
 ?>
 
 <div class="account-page">
     <div class="account-wrap">
         <nav class="account-breadcrumb">
-            <a href="<?php echo APPURL; ?>">Home</a>
+            <a href="<?php echo esc_url(APPURL); ?>">Home</a>
             <span>›</span>
             <strong>Wallet & Topup</strong>
         </nav>
 
         <div class="account-layout">
-            <?php include 'includes/sidebar.php'; ?>
+            <?php include __DIR__ . '/includes/sidebar.php'; ?>
 
             <div style="display:flex;flex-direction:column;gap:20px;">
                 <?php if ($successMsg): ?>
                 <div class="alert-success">
                     <i data-lucide="check-circle" style="width:18px;height:18px;flex-shrink:0;"></i>
-                    <?php echo htmlspecialchars($successMsg); ?>
+                    <?php echo esc_html($successMsg); ?>
                 </div>
                 <?php endif; ?>
                 <?php if ($errorMsg): ?>
                 <div class="alert-error">
                     <i data-lucide="alert-circle" style="width:18px;height:18px;flex-shrink:0;"></i>
-                    <?php echo htmlspecialchars($errorMsg); ?>
+                    <?php echo esc_html($errorMsg); ?>
                 </div>
                 <?php endif; ?>
 
@@ -135,7 +130,7 @@ include 'includes/styles.php';
                     </h2>
                     <form method="POST" id="topup-form">
                         <input type="hidden" name="topup" value="1">
-                        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
+                        <?php echo csrf_field(); ?>
                         <div style="margin-bottom:22px;">
                             <label style="font-size:0.8rem;font-weight:700;color:#444;display:block;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.04em;">Pilih Nominal</label>
                             <div style="display:flex;flex-wrap:wrap;gap:10px;" id="amount-buttons">
