@@ -9,6 +9,14 @@
 
 ---
 
+## Live Deployment URLs
+
+- **PHP Web Application (Railway):** https://shopmart-web-production.up.railway.app/
+- **Machine Learning API (Hugging Face Spaces):** https://jasonloi-shopmart-ml-service.hf.space/
+- **Machine Learning API Docs:** https://jasonloi-shopmart-ml-service.hf.space/docs
+
+---
+
 ## 1. Problem Statement & Motivation
 In the rapidly growing e-commerce sector, customer retention and transactional integrity are paramount. Two significant challenges persist for online retailers: identifying customers who are likely to stop purchasing (customer churn) and detecting fraudulent or anomalous transactions. 
 
@@ -86,7 +94,181 @@ To fulfill the evaluation requirement, the deployed dashboard is subjected to ph
 5. Access the Administration Dashboard at: `http://localhost/shopmart/admin/`
 6. Access the Churn Prediction Dashboard at: `http://localhost/shopmart/admin/churn/`
 
-### D. Deploying the ML Service to Hugging Face Spaces
+### D. Deploying the PHP Web Application to Railway
+The PHP storefront/admin application is deployed to Railway using a Docker image, with managed MySQL and Redis services in the same Railway project.
+
+#### Railway Services
+- **Project:** `shopmart`
+- **Web service:** `shopmart-web`
+- **MySQL service:** `MySQL`
+- **Redis service:** `Redis`
+- **Public web URL:** https://shopmart-web-production.up.railway.app/
+- **Docker image:** `jblloi03452/shopmart-web`
+- **Pinned image digest with DB auto-bootstrap:** `sha256:10f9653d9bb92608fa5d4f3db42d7898d44859d9b16323f01c4fd665fb1adf1b`
+
+#### Build and Push the Web Image
+Build the PHP Apache image locally:
+
+```powershell
+docker build -t shopmart-web:latest -t jblloi03452/shopmart-web:latest .
+```
+
+Push the image to Docker Hub:
+
+```powershell
+docker push jblloi03452/shopmart-web:latest
+```
+
+If Docker Hub upload fails with an `EOF` error, retry after logging in again:
+
+```powershell
+docker logout
+docker login -u jblloi03452
+docker push jblloi03452/shopmart-web:latest
+```
+
+#### Link the Docker Image to Railway
+Connect the image to the Railway web service:
+
+```powershell
+railway service source connect --image jblloi03452/shopmart-web:latest --service shopmart-web
+```
+
+For reproducible deployments, pin the known-good digest:
+
+```powershell
+railway service source connect --image jblloi03452/shopmart-web@sha256:10f9653d9bb92608fa5d4f3db42d7898d44859d9b16323f01c4fd665fb1adf1b --service shopmart-web
+```
+
+Redeploy the web service:
+
+```powershell
+railway service redeploy --service shopmart-web --yes
+```
+
+#### Required Railway Variables
+Set these variables on the `shopmart-web` service. Use Railway variable references for MySQL and Redis values; do not hard-code passwords in the repository.
+
+```text
+APP_ENV=production
+APP_DEBUG=false
+APP_URL=https://shopmart-web-production.up.railway.app
+PORT=8080
+
+DB_HOST=${{MySQL.MYSQLHOST}}
+DB_PORT=${{MySQL.MYSQLPORT}}
+DB_NAME=railway
+DB_USERNAME=${{MySQL.MYSQLUSER}}
+DB_PASSWORD=${{MySQL.MYSQLPASSWORD}}
+
+REDIS_HOST=${{Redis.REDISHOST}}
+REDIS_PORT=${{Redis.REDISPORT}}
+REDIS_PASSWORD=${{Redis.REDISPASSWORD}}
+REDIS_DATABASE=0
+```
+
+Rate-limit variables can keep the local defaults:
+
+```text
+RATE_LIMIT_LOGIN_MAX=5
+RATE_LIMIT_LOGIN_DECAY=15
+RATE_LIMIT_REGISTER_MAX=10
+RATE_LIMIT_REGISTER_DECAY=5
+RATE_LIMIT_FORGOT_PASSWORD_MAX=3
+RATE_LIMIT_FORGOT_PASSWORD_DECAY=30
+RATE_LIMIT_CONTACT_MAX=5
+RATE_LIMIT_CONTACT_DECAY=10
+RATE_LIMIT_API_MAX=1000
+RATE_LIMIT_API_DECAY=1
+RATE_LIMIT_GENERAL_MAX=60
+RATE_LIMIT_GENERAL_DECAY=1
+```
+
+Generate a fresh `SECRET_KEY` in Railway. Do not reuse or commit local `.env` secrets.
+
+#### Generate the Public Domain
+The container listens on port `8080`, so generate the Railway domain with:
+
+```powershell
+railway domain --service shopmart-web --port 8080
+```
+
+Then make sure `APP_URL` matches the generated domain:
+
+```powershell
+railway variable set --service shopmart-web APP_URL=https://shopmart-web-production.up.railway.app
+railway service redeploy --service shopmart-web --yes
+```
+
+#### MySQL Schema and Seed Data
+Railway creates an empty default MySQL database named `railway`. The Docker image includes an automatic database bootstrap step so the schema does not need to be pasted manually into the Railway console.
+
+The bootstrap runs from `docker-entrypoint.sh` before Apache starts:
+
+```text
+php /var/www/html/scripts/railway-bootstrap-db.php
+```
+
+The bootstrap script:
+- connects with the Railway `DB_*` or `MYSQL*` environment variables
+- checks whether the `products` table already exists and contains data
+- imports `database/shopmart_railway_import.sql` only when the database is empty
+- skips import on later restarts after the seed data already exists
+
+The Railway import file intentionally omits `CREATE DATABASE` and `USE` statements so it imports into Railway's default `railway` database:
+
+```text
+database/shopmart_railway_import.sql
+```
+
+Keep the web service database name set to:
+
+```text
+DB_NAME=railway
+```
+
+After deployment, verify the database from the Railway MySQL Data tab or Console:
+
+```sql
+SHOW TABLES;
+SELECT COUNT(*) FROM products;
+```
+
+Manual fallback: if automatic bootstrap is disabled or the SQL file is not included in the image, import `database/shopmart_railway_import.sql` into the default `railway` database using the Railway MySQL Console or a modern MySQL client.
+
+If the web app shows `503 Service Unavailable`, check the logs:
+
+```powershell
+railway logs --service shopmart-web --lines 120
+```
+
+Common database-related messages:
+- `Unknown database 'shopmart'`: `DB_NAME` is still set to `shopmart`; change it to `railway`.
+- `Table 'railway.products' doesn't exist`: the bootstrap has not run yet, the SQL file is missing from the image, or the import failed.
+- `Base table or view not found`: the database exists, but the schema/data import is incomplete.
+
+#### Deployment Verification
+Check the service status:
+
+```powershell
+railway service status --service shopmart-web
+```
+
+Expected result:
+
+```text
+Status: SUCCESS
+```
+
+Verify the public URL:
+
+```powershell
+Invoke-WebRequest -Uri https://shopmart-web-production.up.railway.app -UseBasicParsing
+```
+
+Expected HTTP status: `200`.
+
+### E. Deploying the ML Service to Hugging Face Spaces
 The Flask-based ML API in `ml_services/` is deployed to Hugging Face Spaces using Docker.
 
 #### Hugging Face Space Settings
