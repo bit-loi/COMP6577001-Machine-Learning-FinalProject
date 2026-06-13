@@ -3,7 +3,6 @@
 .gitignore
 
 # Docker files
-Dockerfile
 docker-compose.yml
 .dockerignore
 
@@ -27,6 +26,15 @@ Thumbs.db
 # Local secrets
 .env
 ml_services/.env
+
+# Node/Python/ML artifacts not needed by the PHP web image
+node_modules/
+vendor/
+ml_services/
+__pycache__/
+*.pyc
+*.pyo
+*.ipynb
 
 # Temporary files
 tmp/

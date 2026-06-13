@@ -276,20 +276,56 @@ class WikipediaService
         return compact('text', 'source', 'pageUrl', 'pageTitle', 'cached', 'rateLimited');
     }
 
+    private function env($keys, $default = null)
+    {
+        foreach ((array) $keys as $key) {
+            $value = getenv($key);
+            if ($value !== false && $value !== '') return $value;
+            if (isset($_ENV[$key]) && $_ENV[$key] !== '') return $_ENV[$key];
+            if (isset($_SERVER[$key]) && $_SERVER[$key] !== '') return $_SERVER[$key];
+        }
+
+        return $default;
+    }
+
+    private function redisUrlConfig($url): array
+    {
+        if (empty($url)) return [];
+
+        $parts = parse_url($url);
+        if ($parts === false) return [];
+
+        $database = 0;
+        if (!empty($parts['path'])) {
+            $path = ltrim($parts['path'], '/');
+            $database = ctype_digit($path) ? (int) $path : 0;
+        }
+
+        return [
+            'host' => $parts['host'] ?? null,
+            'port' => $parts['port'] ?? null,
+            'username' => isset($parts['user']) ? rawurldecode($parts['user']) : null,
+            'password' => isset($parts['pass']) ? rawurldecode($parts['pass']) : null,
+            'database' => $database,
+        ];
+    }
+
     private function connectRedis(): void
     {
         if (!extension_loaded('redis')) return;
 
-        $host     = getenv('REDIS_HOST')     ?: 'localhost';
-        $port     = (int)(getenv('REDIS_PORT')     ?: 6379);
-        $password = getenv('REDIS_PASSWORD') ?: null;
-        $db       = (int)(getenv('REDIS_DATABASE') ?: 0);
+        $urlConfig = $this->redisUrlConfig($this->env('REDIS_URL', ''));
+        $host     = $this->env(['REDIS_HOST', 'REDISHOST'], $urlConfig['host'] ?? 'localhost');
+        $port     = (int) $this->env(['REDIS_PORT', 'REDISPORT'], $urlConfig['port'] ?? 6379);
+        $username = $this->env(['REDIS_USER', 'REDISUSER'], $urlConfig['username'] ?? null);
+        $password = $this->env(['REDIS_PASSWORD', 'REDISPASSWORD'], $urlConfig['password'] ?? null);
+        $db       = (int) $this->env(['REDIS_DATABASE', 'REDISDATABASE'], $urlConfig['database'] ?? 0);
 
         try {
             /** @phpstan-ignore-next-line (Redis is a PHP extension class) */
         $r = new \Redis();
             if (!$r->connect($host, $port, 2.0)) return;
-            if ($password) $r->auth($password);
+            if ($password) $username ? $r->auth([$username, $password]) : $r->auth($password);
             if ($db > 0)   $r->select($db);
             $this->redis  = $r;
             $this->redisOk = true;

@@ -1,0 +1,10 @@
+.git
+node_modules
+vendor
+.env
+ml_services
+.vscode
+.idea
+*.log
+tmp/
+temp/

@@ -16,10 +16,18 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install PHP extensions
-RUN docker-php-ext-install pdo pdo_mysql mysqli mbstring exif pcntl bcmath gd
+RUN docker-php-ext-install pdo pdo_mysql mysqli mbstring exif pcntl bcmath gd \
+    && pecl install redis \
+    && docker-php-ext-enable redis
 
 # Enable Apache mod_rewrite
-RUN a2enmod rewrite
+RUN a2dismod -q mpm_event mpm_worker || true \
+    && a2enmod -q mpm_prefork rewrite \
+    && echo 'ServerName localhost' > /etc/apache2/conf-available/servername.conf \
+    && a2enconf -q servername
+
+COPY docker-entrypoint.sh /usr/local/bin/shopmart-start
+RUN chmod +x /usr/local/bin/shopmart-start
 
 # Copy application files
 COPY . /var/www/html/
@@ -42,7 +50,5 @@ RUN sed -i 's/Listen 80/Listen 8080/' /etc/apache2/ports.conf \
 # Expose the unprivileged Apache port
 EXPOSE 8080
 
-USER www-data
-
 # Start Apache in foreground
-CMD ["apache2-foreground"]
+CMD ["shopmart-start"]

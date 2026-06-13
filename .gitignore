@@ -13,7 +13,6 @@ Thumbs.db
 desktop.ini
 
 # Configuration Files (sensitive)
-config/config.php
 .env
 
 # Logs
